@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Hệ Thống Điểm Danh QR Code</title>
+  <!-- Thư viện Quét QR Code -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #121212; color: #fff; margin: 0; padding: 15px; }
+    .container { max-width: 480px; margin: 0 auto; text-align: center; }
+    h2 { color: #4caf50; font-size: 20px; margin-top: 5px; margin-bottom: 15px; }
+    
+    #reader { width: 100%; background: #000; border-radius: 12px; overflow: hidden; border: 2px solid #333; min-height: 280px; }
+    
+    .status-text { margin-top: 10px; font-size: 14px; color: #aaa; }
+
+    /* Overlay Popup 2s */
+    #overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.85); z-index: 9999;
+      justify-content: center; align-items: center;
+    }
+    .popup-card {
+      background: #ffffff; color: #333; padding: 25px; border-radius: 16px;
+      width: 85%; max-width: 380px; text-align: center;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5); animation: popIn 0.25s ease-out;
+    }
+    .popup-card.success { border-top: 8px solid #4caf50; }
+    .popup-card.duplicate { border-top: 8px solid #ff9800; }
+    .popup-card.error { border-top: 8px solid #f44336; }
+    
+    .status-icon { font-size: 45px; margin-bottom: 5px; }
+    .student-name { font-size: 22px; font-weight: bold; color: #1a73e8; margin: 5px 0; }
+    .student-info { font-size: 16px; margin: 4px 0; color: #444; }
+    .timer-bar { height: 4px; background: #1a73e8; width: 100%; margin-top: 15px; border-radius: 2px; animation: shrink 2s linear forwards; }
+    
+    @keyframes popIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    @keyframes shrink { from { width: 100%; } to { width: 0%; } }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>QUÉT MÃ QR ĐIỂM DANH HỌC SINH</h2>
+  <div id="reader"></div>
+  <div class="status-text" id="statusNotice">Đang khởi động Camera...</div>
+</div>
+
+<!-- Popup hiển thị kết quả điểm danh 2s -->
+<div id="overlay">
+  <div id="popupCard" class="popup-card">
+    <div id="statusIcon" class="status-icon">✅</div>
+    <div id="statusTitle" style="font-weight: bold; font-size: 13px; color: #666; text-transform: uppercase;"></div>
+    <div id="studentName" class="student-name">--</div>
+    <div id="studentClass" class="student-info" style="font-weight: bold; color: #d93025;">--</div>
+    <div id="studentId" class="student-info">--</div>
+    <div id="studentDob" class="student-info">--</div>
+    <div id="checkTime" class="student-info" style="font-size: 13px; color: #777; margin-top: 8px;"></div>
+    <div class="timer-bar"></div>
+  </div>
+</div>
+
+<script>
+  // 🔴 DÁN ĐƯỜNG DẪN GOOGLE APPS SCRIPT WEB APP CỦA BẠN VÀO GIỮA DẤU NGOẶC KÉP DƯỚI ĐÂY:
+  const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyrnrYdfNrn5vNJ2-6XftsPIm1uH6t_7T0SM58ypdDo5tqk0O1AMcV8i2X-xCGRHunjNw/exec";
+
+  let isProcessing = false;
+
+  function onScanSuccess(decodedText) {
+    if (isProcessing) return;
+    isProcessing = true;
+
+    playBeep();
+    document.getElementById('statusNotice').innerText = "⏳ Đang gửi dữ liệu điểm danh...";
+
+    // Gửi mã QR về Google Apps Script xử lý
+    fetch(GOOGLE_SCRIPT_URL + "?qr=" + encodeURIComponent(decodedText))
+      .then(response => response.json())
+      .then(res => {
+        document.getElementById('statusNotice').innerText = "Sẵn sàng quét lượt tiếp theo";
+        handleResult(res);
+      })
+      .catch(err => {
+        document.getElementById('statusNotice').innerText = "Sẵn sàng quét lượt tiếp theo";
+        handleResult({ success: false, message: "Lỗi kết nối tới Google Sheet!" });
+      });
+  }
+
+  function handleResult(res) {
+    const overlay = document.getElementById('overlay');
+    const card = document.getElementById('popupCard');
+    
+    if (res.success) {
+      document.getElementById('studentName').innerText = res.student.name;
+      document.getElementById('studentClass').innerText = res.student.grade + " - Lớp " + res.student.className;
+      document.getElementById('studentId').innerText = "Mã HS: " + res.student.id;
+      document.getElementById('studentDob').innerText = "Ngày sinh: " + res.student.dob;
+
+      if (res.alreadyCheckedIn) {
+        card.className = "popup-card duplicate";
+        document.getElementById('statusIcon').innerText = "⚠️";
+        document.getElementById('statusTitle').innerText = "ĐÃ ĐIỂM DANH TRƯỚC ĐÓ";
+        document.getElementById('checkTime').innerText = res.message;
+      } else {
+        card.className = "popup-card success";
+        document.getElementById('statusIcon').innerText = "✅";
+        document.getElementById('statusTitle').innerText = "ĐIỂM DANH THÀNH CÔNG";
+        document.getElementById('checkTime').innerText = "Thời gian quét: " + res.time;
+      }
+    } else {
+      card.className = "popup-card error";
+      document.getElementById('statusIcon').innerText = "❌";
+      document.getElementById('statusTitle').innerText = "LỖI ĐIỂM DANH";
+      document.getElementById('studentName').innerText = res.message;
+      document.getElementById('studentClass').innerText = "";
+      document.getElementById('studentId').innerText = "";
+      document.getElementById('studentDob').innerText = "";
+      document.getElementById('checkTime').innerText = "";
+    }
+
+    overlay.style.display = 'flex';
+
+    // Đóng Popup đúng sau 2s
+    setTimeout(() => {
+      overlay.style.display = 'none';
+      isProcessing = false;
+    }, 2000);
+  }
+
+  function playBeep() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(800, ctx.currentTime);
+      osc.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.12);
+    } catch(e) {}
+  }
+
+  window.onload = function() {
+    const html5QrcodeScanner = new Html5QrcodeScanner(
+      "reader", { fps: 10, qrbox: { width: 250, height: 250 } }
+    );
+    html5QrcodeScanner.render(onScanSuccess);
+    document.getElementById('statusNotice').innerText = "Sẵn sàng quét mã QR";
+  };
+</script>
+
+</body>
+</html>
