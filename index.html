@@ -15,9 +15,14 @@
     button.alt { background: #333; border: 1px solid #555; }
     #reader { width: 100%; background: #000; border-radius: 12px; overflow: hidden; margin-top: 15px; }
     
+    .status-badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-bottom: 8px; }
+    .online { background: #2e7d32; color: #fff; }
+    .offline { background: #c62828; color: #fff; }
+
     #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; justify-content: center; align-items: center; }
     .popup-card { background: #fff; color: #333; padding: 25px; border-radius: 16px; width: 85%; max-width: 380px; text-align: center; }
     .popup-card.success { border-top: 8px solid #4caf50; }
+    .popup-card.offline-saved { border-top: 8px solid #2196f3; }
     .popup-card.duplicate { border-top: 8px solid #ff9800; }
     .popup-card.error { border-top: 8px solid #f44336; }
     .timer-bar { height: 4px; background: #1a73e8; width: 100%; margin-top: 15px; animation: shrink 2s linear forwards; }
@@ -27,7 +32,7 @@
 <body>
 
 <div class="container">
-  <!-- ĐĂNG NHẬP -->
+  <!-- MÀN HÌNH ĐĂNG NHẬP -->
   <div id="loginView" class="card">
     <h2 style="color: #4caf50;">ĐĂNG NHẬP HỆ THỐNG</h2>
     <input type="text" id="username" placeholder="Số định danh / Mã cán bộ">
@@ -38,6 +43,10 @@
 
   <!-- MÀN HÌNH QUÉT QR -->
   <div id="mainView" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+      <span id="networkStatus" class="status-badge online">🌐 Trực tuyến</span>
+      <span id="pendingCount" style="font-size: 12px; color: #ffca28;"></span>
+    </div>
     <div style="display: flex; justify-content: space-between; align-items: center;">
       <span id="userInfo" style="font-weight: bold; color: #64b5f6;"></span>
       <div>
@@ -48,7 +57,7 @@
     <div id="reader"></div>
   </div>
 
-  <!-- ĐỔI MẬT KHẨU -->
+  <!-- MÀN HÌNH ĐỔI MẬT KHẨU -->
   <div id="changePassView" class="card" style="display: none;">
     <h3>ĐỔI MẬT KHẨU</h3>
     <input type="password" id="oldPass" placeholder="Mật khẩu hiện tại">
@@ -59,7 +68,7 @@
   </div>
 </div>
 
-<!-- POPUP KẾT QUẢ QUÉT 2S -->
+<!-- POPUP KẾT QUẢ -->
 <div id="overlay">
   <div id="popupCard" class="popup-card">
     <div id="statusIcon" style="font-size: 40px;">✅</div>
@@ -74,15 +83,57 @@
 </div>
 
 <script>
-  // 🔴 DÁN ĐÚNG URL WEB APP GOOGLE APPS SCRIPT CỦA BẠN VÀO ĐÂY:
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyoUpOduv7ouG5Q_ma5dfXQGIZHqUgxb6p3d9KscgXigV8248bFbgYAPfItLTzgzd1B4A/exec";
+  // 🔴 DÁN URL WEB APP CỦA BẠN VÀO ĐÂY:
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzqXbtlWx3NnFRtrg3X-_yH23K8WZFzrcVHxBBy8ld53XlUHjHHoajR_lzT8UAjFS_euA/exec";
 
   let currentUser = null;
   let html5QrcodeScanner = null;
   let isProcessing = false;
+  let isSyncing = false;
 
-  // HÀM GỬI YÊU CẦU DẠNG JSONP (CHỐNG LỖI KẾT NỐI VÀ LỖI BẢO MẬT BỊ CHẶN)
-  function callAPI(params, callbackName) {
+  window.onload = function() {
+    updateNetworkStatus();
+    window.addEventListener('online', updateNetworkStatus);
+    window.addEventListener('offline', updateNetworkStatus);
+
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      currentUser = JSON.parse(savedUser);
+      showMainView();
+    }
+  };
+
+  function updateNetworkStatus() {
+    const badge = document.getElementById('networkStatus');
+    if (!badge) return;
+    if (navigator.onLine) {
+      badge.className = "status-badge online";
+      badge.innerText = "🌐 Trực tuyến";
+      syncOfflineData(); // Tự động đồng bộ khi có mạng lại
+    } else {
+      badge.className = "status-badge offline";
+      badge.innerText = "📡 Mất kết nối (Lưu Offline)";
+    }
+    updatePendingUI();
+  }
+
+  function getOfflineQueue() {
+    return JSON.parse(localStorage.getItem("offline_queue") || "[]");
+  }
+
+  function saveOfflineQueue(queue) {
+    localStorage.setItem("offline_queue", JSON.stringify(queue));
+    updatePendingUI();
+  }
+
+  function updatePendingUI() {
+    const countEl = document.getElementById("pendingCount");
+    if (!countEl) return;
+    const q = getOfflineQueue();
+    countEl.innerText = q.length > 0 ? `⏳ Chờ đồng bộ: ${q.length}` : "";
+  }
+
+  function callAPI(params, callbackName, onError) {
     const oldScript = document.getElementById('jsonp_script');
     if (oldScript) oldScript.remove();
 
@@ -95,22 +146,10 @@
     script.id = 'jsonp_script';
     script.src = url;
     script.onerror = function() {
-      if (callbackName === 'onLoginResp') {
-        document.getElementById("loginError").innerText = "Lỗi kết nối máy chủ! Hãy kiểm tra lại URL Web App.";
-      } else if (callbackName === 'onCheckInResp') {
-        handleResult({ success: false, message: "Lỗi kết nối máy chủ khi quét QR!" });
-      }
+      if (onError) onError();
     };
     document.body.appendChild(script);
   }
-
-  window.onload = function() {
-    const savedUser = localStorage.getItem("user");
-    if (savedUser) {
-      currentUser = JSON.parse(savedUser);
-      showMainView();
-    }
-  };
 
   function handleLogin() {
     const u = document.getElementById("username").value.trim();
@@ -118,7 +157,9 @@
     if (!u || !p) return alert("Vui lòng nhập đầy đủ Số định danh và Mật khẩu!");
 
     document.getElementById("loginError").innerText = "Đang xác thực...";
-    callAPI({ action: "login", username: u, password: p }, "onLoginResp");
+    callAPI({ action: "login", username: u, password: p }, "onLoginResp", function() {
+      document.getElementById("loginError").innerText = "Lỗi kết nối máy chủ!";
+    });
   }
 
   function onLoginResp(data) {
@@ -137,11 +178,14 @@
     document.getElementById("changePassView").style.display = "none";
     document.getElementById("mainView").style.display = "block";
     document.getElementById("userInfo").innerText = `${currentUser.name} (${currentUser.role})`;
+    updatePendingUI();
 
     if (!html5QrcodeScanner) {
       html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: { width: 240, height: 240 } });
       html5QrcodeScanner.render(onScanSuccess);
     }
+
+    syncOfflineData();
   }
 
   function onScanSuccess(decodedText) {
@@ -149,15 +193,80 @@
     isProcessing = true;
     playBeep();
 
+    const nowTimestamp = Date.now();
+
+    // NẾU MẤT MẠNG -> LƯU VÀO HÀNG CHỜ OFFLINE NGAY LẬP TỨC
+    if (!navigator.onLine) {
+      saveScanOffline(decodedText, nowTimestamp);
+      return;
+    }
+
+    // NẾU CÓ MẠNG -> GỬI LÊN SERVER, NẾU LỖI MẠNG ĐỘT NGỘT THÌ CHUYỂN SANG OFFLINE
     callAPI({
       action: "checkIn",
       qrContent: decodedText,
-      scannerId: currentUser.id
-    }, "onCheckInResp");
+      scannerId: currentUser.id,
+      timestamp: nowTimestamp
+    }, "onCheckInResp", function() {
+      saveScanOffline(decodedText, nowTimestamp);
+    });
+  }
+
+  function saveScanOffline(decodedText, timestamp) {
+    const queue = getOfflineQueue();
+    queue.push({
+      qrContent: decodedText,
+      scannerId: currentUser.id,
+      timestamp: timestamp
+    });
+    saveOfflineQueue(queue);
+
+    const d = new Date(timestamp);
+    const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+
+    handleResult({
+      success: true,
+      offlineSaved: true,
+      student: { name: "Lưu tạm máy (Offline)", className: "--", id: decodedText },
+      time: timeStr,
+      scanner: currentUser.name,
+      message: "Đã lưu tạm vào thiết bị. Sẽ tự động cập nhật khi có mạng!"
+    });
   }
 
   function onCheckInResp(res) {
     handleResult(res);
+  }
+
+  function syncOfflineData() {
+    if (isSyncing || !navigator.onLine) return;
+    const queue = getOfflineQueue();
+    if (queue.length === 0) return;
+
+    isSyncing = true;
+    const item = queue[0];
+
+    window.onSyncItemResp = function(res) {
+      // Đã đẩy xong item đầu tiên -> Xóa khỏi hàng chờ
+      const currentQ = getOfflineQueue();
+      currentQ.shift();
+      saveOfflineQueue(currentQ);
+      isSyncing = false;
+      
+      // Tiếp tục đẩy các item còn lại (nếu có)
+      if (currentQ.length > 0) {
+        syncOfflineData();
+      }
+    };
+
+    callAPI({
+      action: "checkIn",
+      qrContent: item.qrContent,
+      scannerId: item.scannerId,
+      timestamp: item.timestamp
+    }, "onSyncItemResp", function() {
+      isSyncing = false; // Lỗi mạng lại thì dừng
+    });
   }
 
   function handleResult(res) {
@@ -170,7 +279,12 @@
       document.getElementById('studentId').innerText = "Mã HS: " + res.student.id;
       document.getElementById('scannerInfo').innerText = "Người quét: " + res.scanner;
 
-      if (res.alreadyCheckedIn) {
+      if (res.offlineSaved) {
+        card.className = "popup-card offline-saved";
+        document.getElementById('statusIcon').innerText = "💾";
+        document.getElementById('statusTitle').innerText = "ĐÃ LƯU OFFLINE (CHỜ MẠNG)";
+        document.getElementById('checkTime').innerText = res.message;
+      } else if (res.alreadyCheckedIn) {
         card.className = "popup-card duplicate";
         document.getElementById('statusIcon').innerText = "⚠️";
         document.getElementById('statusTitle').innerText = "ĐÃ ĐIỂM DANH TRƯỚC ĐÓ";
