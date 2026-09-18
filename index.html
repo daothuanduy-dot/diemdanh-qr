@@ -31,7 +31,7 @@
   <!-- MÀN HÌNH ĐĂNG NHẬP -->
   <div id="loginView" class="card">
     <h2 style="color: #4caf50;">ĐĂNG NHẬP HỆ THỐNG</h2>
-    <input type="text" id="username" placeholder="Số định danh / Mã cán bộ">
+    <input type="text" id="username" placeholder="Số định danh / Mã cán bộ / Mã học sinh">
     <input type="password" id="password" placeholder="Mật khẩu">
     <button onclick="handleLogin()">ĐĂNG NHẬP</button>
     <div id="loginError" style="color: #f44336; margin-top: 10px; font-size: 14px;"></div>
@@ -76,7 +76,7 @@
 
 <script>
   // 🔴 THAY ĐƯỜNG DẪN GOOGLE APPS SCRIPT CỦA BẠN VÀO GIỮA DẤU NGOẶC KÉP DƯỚI ĐÂY:
-  const SCRIPT_URL = "URL_WEB_APP_GOOGLE_APPS_SCRIPT_CUA_BAN";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxiprmc8zEVZTUH8IJ2uT-CxjvWyHP1Qj8-g120rpmdXqsRMIoimNGnxXJTVVbmn1Qnbg/exec";
 
   let currentUser = null;
   let html5QrcodeScanner = null;
