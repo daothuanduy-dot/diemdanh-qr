@@ -15,7 +15,6 @@
     button.alt { background: #333; border: 1px solid #555; }
     #reader { width: 100%; background: #000; border-radius: 12px; overflow: hidden; margin-top: 15px; }
     
-    /* Overlay Popup 2s */
     #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; justify-content: center; align-items: center; }
     .popup-card { background: #fff; color: #333; padding: 25px; border-radius: 16px; width: 85%; max-width: 380px; text-align: center; }
     .popup-card.success { border-top: 8px solid #4caf50; }
@@ -28,16 +27,16 @@
 <body>
 
 <div class="container">
-  <!-- MÀN HÌNH ĐĂNG NHẬP -->
+  <!-- ĐĂNG NHẬP -->
   <div id="loginView" class="card">
     <h2 style="color: #4caf50;">ĐĂNG NHẬP HỆ THỐNG</h2>
-    <input type="text" id="username" placeholder="Số định danh / Mã cán bộ / Mã học sinh">
+    <input type="text" id="username" placeholder="Số định danh / Mã cán bộ">
     <input type="password" id="password" placeholder="Mật khẩu">
     <button onclick="handleLogin()">ĐĂNG NHẬP</button>
     <div id="loginError" style="color: #f44336; margin-top: 10px; font-size: 14px;"></div>
   </div>
 
-  <!-- MÀN HÌNH CHÍNH (QUÉT QR) -->
+  <!-- MÀN HÌNH QUÉT QR -->
   <div id="mainView" style="display: none;">
     <div style="display: flex; justify-content: space-between; align-items: center;">
       <span id="userInfo" style="font-weight: bold; color: #64b5f6;"></span>
@@ -49,7 +48,7 @@
     <div id="reader"></div>
   </div>
 
-  <!-- MÀN HÌNH ĐỔI MẬT KHẨU -->
+  <!-- ĐỔI MẬT KHẨU -->
   <div id="changePassView" class="card" style="display: none;">
     <h3>ĐỔI MẬT KHẨU</h3>
     <input type="password" id="oldPass" placeholder="Mật khẩu hiện tại">
@@ -60,7 +59,7 @@
   </div>
 </div>
 
-<!-- POPUP HIỂN THỊ KẾT QUẢ QUÉT 2S -->
+<!-- POPUP KẾT QUẢ QUÉT 2S -->
 <div id="overlay">
   <div id="popupCard" class="popup-card">
     <div id="statusIcon" style="font-size: 40px;">✅</div>
@@ -75,12 +74,35 @@
 </div>
 
 <script>
-  // 🔴 THAY ĐƯỜNG DẪN GOOGLE APPS SCRIPT CỦA BẠN VÀO GIỮA DẤU NGOẶC KÉP DƯỚI ĐÂY:
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx8bipRKXkm6_Ou7MmRQD7IoSty91J3EsA3L_YP_A-aP6nlDFURWEmhp-Yt3p8h2i-Q/exec";
+  // 🔴 DÁN ĐÚNG URL WEB APP GOOGLE APPS SCRIPT CỦA BẠN VÀO ĐÂY:
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyoUpOduv7ouG5Q_ma5dfXQGIZHqUgxb6p3d9KscgXigV8248bFbgYAPfItLTzgzd1B4A/exec";
 
   let currentUser = null;
   let html5QrcodeScanner = null;
   let isProcessing = false;
+
+  // HÀM GỬI YÊU CẦU DẠNG JSONP (CHỐNG LỖI KẾT NỐI VÀ LỖI BẢO MẬT BỊ CHẶN)
+  function callAPI(params, callbackName) {
+    const oldScript = document.getElementById('jsonp_script');
+    if (oldScript) oldScript.remove();
+
+    let url = SCRIPT_URL + "?callback=" + callbackName;
+    for (let key in params) {
+      url += "&" + key + "=" + encodeURIComponent(params[key]);
+    }
+
+    const script = document.createElement('script');
+    script.id = 'jsonp_script';
+    script.src = url;
+    script.onerror = function() {
+      if (callbackName === 'onLoginResp') {
+        document.getElementById("loginError").innerText = "Lỗi kết nối máy chủ! Hãy kiểm tra lại URL Web App.";
+      } else if (callbackName === 'onCheckInResp') {
+        handleResult({ success: false, message: "Lỗi kết nối máy chủ khi quét QR!" });
+      }
+    };
+    document.body.appendChild(script);
+  }
 
   window.onload = function() {
     const savedUser = localStorage.getItem("user");
@@ -96,19 +118,18 @@
     if (!u || !p) return alert("Vui lòng nhập đầy đủ Số định danh và Mật khẩu!");
 
     document.getElementById("loginError").innerText = "Đang xác thực...";
-    fetch(`${SCRIPT_URL}?action=login&username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          currentUser = data.user;
-          localStorage.setItem("user", JSON.stringify(currentUser));
-          document.getElementById("loginError").innerText = "";
-          showMainView();
-        } else {
-          document.getElementById("loginError").innerText = data.message;
-        }
-      })
-      .catch(err => document.getElementById("loginError").innerText = "Lỗi kết nối máy chủ!");
+    callAPI({ action: "login", username: u, password: p }, "onLoginResp");
+  }
+
+  function onLoginResp(data) {
+    if (data.success) {
+      currentUser = data.user;
+      localStorage.setItem("user", JSON.stringify(currentUser));
+      document.getElementById("loginError").innerText = "";
+      showMainView();
+    } else {
+      document.getElementById("loginError").innerText = data.message;
+    }
   }
 
   function showMainView() {
@@ -128,10 +149,15 @@
     isProcessing = true;
     playBeep();
 
-    fetch(`${SCRIPT_URL}?action=checkIn&qrContent=${encodeURIComponent(decodedText)}&scannerId=${encodeURIComponent(currentUser.id)}`)
-      .then(res => res.json())
-      .then(res => handleResult(res))
-      .catch(err => handleResult({ success: false, message: "Lỗi ghi dữ liệu!" }));
+    callAPI({
+      action: "checkIn",
+      qrContent: decodedText,
+      scannerId: currentUser.id
+    }, "onCheckInResp");
+  }
+
+  function onCheckInResp(res) {
+    handleResult(res);
   }
 
   function handleResult(res) {
@@ -190,22 +216,27 @@
     document.getElementById("changePassMsg").style.color = "#ffeb3b";
     document.getElementById("changePassMsg").innerText = "Đang cập nhật...";
 
-    fetch(`${SCRIPT_URL}?action=changePassword&username=${encodeURIComponent(currentUser.id)}&oldPassword=${encodeURIComponent(oldP)}&newPassword=${encodeURIComponent(newP)}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          document.getElementById("changePassMsg").style.color = "#4caf50";
-          document.getElementById("changePassMsg").innerText = data.message;
-          setTimeout(() => {
-            document.getElementById("oldPass").value = "";
-            document.getElementById("newPass").value = "";
-            showMainView();
-          }, 1500);
-        } else {
-          document.getElementById("changePassMsg").style.color = "#f44336";
-          document.getElementById("changePassMsg").innerText = data.message;
-        }
-      });
+    callAPI({
+      action: "changePassword",
+      username: currentUser.id,
+      oldPassword: oldP,
+      newPassword: newP
+    }, "onChangePassResp");
+  }
+
+  function onChangePassResp(data) {
+    if (data.success) {
+      document.getElementById("changePassMsg").style.color = "#4caf50";
+      document.getElementById("changePassMsg").innerText = data.message;
+      setTimeout(() => {
+        document.getElementById("oldPass").value = "";
+        document.getElementById("newPass").value = "";
+        showMainView();
+      }, 1500);
+    } else {
+      document.getElementById("changePassMsg").style.color = "#f44336";
+      document.getElementById("changePassMsg").innerText = data.message;
+    }
   }
 
   function handleLogout() {
