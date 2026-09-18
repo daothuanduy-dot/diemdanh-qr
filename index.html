@@ -2,101 +2,147 @@
 <html lang="vi">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Hệ Thống Điểm Danh QR Code</title>
-  <!-- Thư viện Quét QR Code -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hệ Thống Quét Mã QR & Điểm Danh</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     * { box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #121212; color: #fff; margin: 0; padding: 15px; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #fff; margin: 0; padding: 15px; }
     .container { max-width: 480px; margin: 0 auto; text-align: center; }
-    h2 { color: #4caf50; font-size: 20px; margin-top: 5px; margin-bottom: 15px; }
+    .card { background: #1e1e1e; padding: 25px; border-radius: 12px; border: 1px solid #333; margin-top: 15px; }
+    input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid #444; background: #222; color: #fff; }
+    button { width: 100%; padding: 12px; margin-top: 10px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; background: #1a73e8; color: white; }
+    button.alt { background: #333; border: 1px solid #555; }
+    #reader { width: 100%; background: #000; border-radius: 12px; overflow: hidden; margin-top: 15px; }
     
-    #reader { width: 100%; background: #000; border-radius: 12px; overflow: hidden; border: 2px solid #333; min-height: 280px; }
-    
-    .status-text { margin-top: 10px; font-size: 14px; color: #aaa; }
-
     /* Overlay Popup 2s */
-    #overlay {
-      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.85); z-index: 9999;
-      justify-content: center; align-items: center;
-    }
-    .popup-card {
-      background: #ffffff; color: #333; padding: 25px; border-radius: 16px;
-      width: 85%; max-width: 380px; text-align: center;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.5); animation: popIn 0.25s ease-out;
-    }
+    #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; justify-content: center; align-items: center; }
+    .popup-card { background: #fff; color: #333; padding: 25px; border-radius: 16px; width: 85%; max-width: 380px; text-align: center; }
     .popup-card.success { border-top: 8px solid #4caf50; }
     .popup-card.duplicate { border-top: 8px solid #ff9800; }
     .popup-card.error { border-top: 8px solid #f44336; }
-    
-    .status-icon { font-size: 45px; margin-bottom: 5px; }
-    .student-name { font-size: 22px; font-weight: bold; color: #1a73e8; margin: 5px 0; }
-    .student-info { font-size: 16px; margin: 4px 0; color: #444; }
-    .timer-bar { height: 4px; background: #1a73e8; width: 100%; margin-top: 15px; border-radius: 2px; animation: shrink 2s linear forwards; }
-    
-    @keyframes popIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .timer-bar { height: 4px; background: #1a73e8; width: 100%; margin-top: 15px; animation: shrink 2s linear forwards; }
     @keyframes shrink { from { width: 100%; } to { width: 0%; } }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <h2>QUÉT MÃ QR ĐIỂM DANH HỌC SINH</h2>
-  <div id="reader"></div>
-  <div class="status-text" id="statusNotice">Đang khởi động Camera...</div>
+  <!-- MÀN HÌNH ĐĂNG NHẬP -->
+  <div id="loginView" class="card">
+    <h2 style="color: #4caf50;">ĐĂNG NHẬP HỆ THỐNG</h2>
+    <input type="text" id="username" placeholder="Số định danh / Mã cán bộ">
+    <input type="password" id="password" placeholder="Mật khẩu">
+    <button onclick="handleLogin()">ĐĂNG NHẬP</button>
+    <div id="loginError" style="color: #f44336; margin-top: 10px; font-size: 14px;"></div>
+  </div>
+
+  <!-- MÀN HÌNH CHÍNH (QUÉT QR) -->
+  <div id="mainView" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <span id="userInfo" style="font-weight: bold; color: #64b5f6;"></span>
+      <div>
+        <button onclick="showChangePassModal()" class="alt" style="width: auto; padding: 6px 10px; font-size: 12px;">Đổi mật khẩu</button>
+        <button onclick="handleLogout()" class="alt" style="width: auto; padding: 6px 10px; font-size: 12px; background: #c62828;">Đăng xuất</button>
+      </div>
+    </div>
+    <div id="reader"></div>
+  </div>
+
+  <!-- MÀN HÌNH ĐỔI MẬT KHẨU -->
+  <div id="changePassView" class="card" style="display: none;">
+    <h3>ĐỔI MẬT KHẨU</h3>
+    <input type="password" id="oldPass" placeholder="Mật khẩu hiện tại">
+    <input type="password" id="newPass" placeholder="Mật khẩu mới">
+    <button onclick="handleChangePassword()">XÁC NHẬN ĐỔI MẬT KHẨU</button>
+    <button onclick="cancelChangePass()" class="alt">HỦY BỎ</button>
+    <div id="changePassMsg" style="margin-top: 10px; font-size: 14px;"></div>
+  </div>
 </div>
 
-<!-- Popup hiển thị kết quả điểm danh 2s -->
+<!-- POPUP HIỂN THỊ KẾT QUẢ QUÉT 2S -->
 <div id="overlay">
   <div id="popupCard" class="popup-card">
-    <div id="statusIcon" class="status-icon">✅</div>
-    <div id="statusTitle" style="font-weight: bold; font-size: 13px; color: #666; text-transform: uppercase;"></div>
-    <div id="studentName" class="student-name">--</div>
-    <div id="studentClass" class="student-info" style="font-weight: bold; color: #d93025;">--</div>
-    <div id="studentId" class="student-info">--</div>
-    <div id="studentDob" class="student-info">--</div>
-    <div id="checkTime" class="student-info" style="font-size: 13px; color: #777; margin-top: 8px;"></div>
+    <div id="statusIcon" style="font-size: 40px;">✅</div>
+    <div id="statusTitle" style="font-weight: bold; font-size: 12px; color: #666; text-transform: uppercase;"></div>
+    <div id="studentName" style="font-size: 20px; font-weight: bold; color: #1a73e8; margin: 5px 0;"></div>
+    <div id="studentClass" style="font-weight: bold; color: #d93025;"></div>
+    <div id="studentId" style="color: #555;"></div>
+    <div id="checkTime" style="font-size: 12px; color: #777; margin-top: 5px;"></div>
+    <div id="scannerInfo" style="font-size: 12px; color: #388e3c; margin-top: 3px;"></div>
     <div class="timer-bar"></div>
   </div>
 </div>
 
 <script>
-  // 🔴 DÁN ĐƯỜNG DẪN GOOGLE APPS SCRIPT WEB APP CỦA BẠN VÀO GIỮA DẤU NGOẶC KÉP DƯỚI ĐÂY:
-  const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxt2GVWBOOXLGGt_E2ntOJ_uiG7aKKA8ntrx-jgVmH81FYOaScDdPMcfudyQ4r84iQArg/exec";
+  // 🔴 THAY ĐƯỜNG DẪN GOOGLE APPS SCRIPT CỦA BẠN VÀO GIỮA DẤU NGOẶC KÉP DƯỚI ĐÂY:
+  const SCRIPT_URL = "URL_WEB_APP_GOOGLE_APPS_SCRIPT_CUA_BAN";
 
+  let currentUser = null;
+  let html5QrcodeScanner = null;
   let isProcessing = false;
+
+  window.onload = function() {
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      currentUser = JSON.parse(savedUser);
+      showMainView();
+    }
+  };
+
+  function handleLogin() {
+    const u = document.getElementById("username").value.trim();
+    const p = document.getElementById("password").value.trim();
+    if (!u || !p) return alert("Vui lòng nhập đầy đủ Số định danh và Mật khẩu!");
+
+    document.getElementById("loginError").innerText = "Đang xác thực...";
+    fetch(`${SCRIPT_URL}?action=login&username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          currentUser = data.user;
+          localStorage.setItem("user", JSON.stringify(currentUser));
+          document.getElementById("loginError").innerText = "";
+          showMainView();
+        } else {
+          document.getElementById("loginError").innerText = data.message;
+        }
+      })
+      .catch(err => document.getElementById("loginError").innerText = "Lỗi kết nối máy chủ!");
+  }
+
+  function showMainView() {
+    document.getElementById("loginView").style.display = "none";
+    document.getElementById("changePassView").style.display = "none";
+    document.getElementById("mainView").style.display = "block";
+    document.getElementById("userInfo").innerText = `${currentUser.name} (${currentUser.role})`;
+
+    if (!html5QrcodeScanner) {
+      html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: { width: 240, height: 240 } });
+      html5QrcodeScanner.render(onScanSuccess);
+    }
+  }
 
   function onScanSuccess(decodedText) {
     if (isProcessing) return;
     isProcessing = true;
-
     playBeep();
-    document.getElementById('statusNotice').innerText = "⏳ Đang gửi dữ liệu điểm danh...";
 
-    // Gửi mã QR về Google Apps Script xử lý
-    fetch(GOOGLE_SCRIPT_URL + "?qr=" + encodeURIComponent(decodedText))
-      .then(response => response.json())
-      .then(res => {
-        document.getElementById('statusNotice').innerText = "Sẵn sàng quét lượt tiếp theo";
-        handleResult(res);
-      })
-      .catch(err => {
-        document.getElementById('statusNotice').innerText = "Sẵn sàng quét lượt tiếp theo";
-        handleResult({ success: false, message: "Lỗi kết nối tới Google Sheet!" });
-      });
+    fetch(`${SCRIPT_URL}?action=checkIn&qrContent=${encodeURIComponent(decodedText)}&scannerId=${encodeURIComponent(currentUser.id)}`)
+      .then(res => res.json())
+      .then(res => handleResult(res))
+      .catch(err => handleResult({ success: false, message: "Lỗi ghi dữ liệu!" }));
   }
 
   function handleResult(res) {
     const overlay = document.getElementById('overlay');
     const card = document.getElementById('popupCard');
-    
+
     if (res.success) {
       document.getElementById('studentName').innerText = res.student.name;
-      document.getElementById('studentClass').innerText = res.student.grade + " - Lớp " + res.student.className;
+      document.getElementById('studentClass').innerText = "Lớp: " + res.student.className;
       document.getElementById('studentId').innerText = "Mã HS: " + res.student.id;
-      document.getElementById('studentDob').innerText = "Ngày sinh: " + res.student.dob;
+      document.getElementById('scannerInfo').innerText = "Người quét: " + res.scanner;
 
       if (res.alreadyCheckedIn) {
         card.className = "popup-card duplicate";
@@ -107,7 +153,7 @@
         card.className = "popup-card success";
         document.getElementById('statusIcon').innerText = "✅";
         document.getElementById('statusTitle').innerText = "ĐIỂM DANH THÀNH CÔNG";
-        document.getElementById('checkTime').innerText = "Thời gian quét: " + res.time;
+        document.getElementById('checkTime').innerText = "Thời gian: " + res.time;
       }
     } else {
       card.className = "popup-card error";
@@ -116,17 +162,56 @@
       document.getElementById('studentName').innerText = res.message;
       document.getElementById('studentClass').innerText = "";
       document.getElementById('studentId').innerText = "";
-      document.getElementById('studentDob').innerText = "";
       document.getElementById('checkTime').innerText = "";
+      document.getElementById('scannerInfo').innerText = "";
     }
 
     overlay.style.display = 'flex';
-
-    // Đóng Popup đúng sau 2s
     setTimeout(() => {
       overlay.style.display = 'none';
       isProcessing = false;
     }, 2000);
+  }
+
+  function showChangePassModal() {
+    document.getElementById("mainView").style.display = "none";
+    document.getElementById("changePassView").style.display = "block";
+  }
+
+  function cancelChangePass() {
+    showMainView();
+  }
+
+  function handleChangePassword() {
+    const oldP = document.getElementById("oldPass").value.trim();
+    const newP = document.getElementById("newPass").value.trim();
+    if (!oldP || !newP) return alert("Vui lòng điền đầy đủ mật khẩu cũ và mới!");
+
+    document.getElementById("changePassMsg").style.color = "#ffeb3b";
+    document.getElementById("changePassMsg").innerText = "Đang cập nhật...";
+
+    fetch(`${SCRIPT_URL}?action=changePassword&username=${encodeURIComponent(currentUser.id)}&oldPassword=${encodeURIComponent(oldP)}&newPassword=${encodeURIComponent(newP)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          document.getElementById("changePassMsg").style.color = "#4caf50";
+          document.getElementById("changePassMsg").innerText = data.message;
+          setTimeout(() => {
+            document.getElementById("oldPass").value = "";
+            document.getElementById("newPass").value = "";
+            showMainView();
+          }, 1500);
+        } else {
+          document.getElementById("changePassMsg").style.color = "#f44336";
+          document.getElementById("changePassMsg").innerText = data.message;
+        }
+      });
+  }
+
+  function handleLogout() {
+    localStorage.removeItem("user");
+    currentUser = null;
+    location.reload();
   }
 
   function playBeep() {
@@ -140,15 +225,6 @@
       osc.stop(ctx.currentTime + 0.12);
     } catch(e) {}
   }
-
-  window.onload = function() {
-    const html5QrcodeScanner = new Html5QrcodeScanner(
-      "reader", { fps: 10, qrbox: { width: 250, height: 250 } }
-    );
-    html5QrcodeScanner.render(onScanSuccess);
-    document.getElementById('statusNotice').innerText = "Sẵn sàng quét mã QR";
-  };
 </script>
-
 </body>
 </html>
