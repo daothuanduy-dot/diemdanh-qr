@@ -67,7 +67,7 @@
   </div>
 </div>
 
-<!-- POPUP KẾT QUẢ QUÉT (HIỂN THỊ 4 GIÂY) -->
+<!-- POPUP KẾT QUẢ QUÉT (4 GIÂY) -->
 <div id="overlay">
   <div id="popupCard" class="popup-card">
     <div id="statusIcon" style="font-size: 44px;">✅</div>
@@ -82,7 +82,7 @@
 </div>
 
 <script>
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwuI96XuLWKcT7ziBYooizX_FBf7PfRttDnapQuZdxfaNWxgzbGdjEbYQwHhi4B7RyafA/exec";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzX1hDt0TURg-wDd_nbZ_2C3Vb-0g5w7lpsUgK-I_00sK6icyougF_dwK6LpCyaZPuOog/exec";
 
   let currentUser = null;
   let html5QrcodeScanner = null;
@@ -216,14 +216,13 @@
     isSyncing = true;
     const item = queue[0];
 
+    // Tạo hàm callback toàn cục nhận phản hồi từ Apps Script
     window.onSyncItemResp = function(res) {
-      // Đã gửi xong item -> Xóa khỏi hàng chờ
       const currentQ = getOfflineQueue();
-      currentQ.shift();
+      currentQ.shift(); // Xóa khỏi hàng chờ ngay lập tức
       saveOfflineQueue(currentQ);
       isSyncing = false;
 
-      // Hiển thị kết quả thực tế trả về từ Server
       handleResult(res);
 
       if (currentQ.length > 0) {
@@ -262,7 +261,7 @@
       if (res.overwritten) {
         card.className = "popup-card overwrite";
         document.getElementById('statusIcon').innerText = "🔄";
-        document.getElementById('statusTitle').innerText = "ĐÃ CẬP NHẬT TỪ VẮNG SANG ĐIỂM DANH";
+        document.getElementById('statusTitle').innerText = "ĐÃ CẬP NHẬT TỪ VẮNG SANG ĐI HỌC MUỘN";
       } else {
         card.className = "popup-card success";
         document.getElementById('statusIcon').innerText = "✅";
