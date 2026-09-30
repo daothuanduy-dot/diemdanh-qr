@@ -24,7 +24,7 @@
     .popup-card.success { border-top: 8px solid #4caf50; }
     .popup-card.overwrite { border-top: 8px solid #ff9800; }
     .popup-card.error { border-top: 8px solid #f44336; }
-    .timer-bar { height: 5px; background: #1a73e8; width: 100%; margin-top: 15px; animation: shrink 4s linear forwards; }
+    .timer-bar { height: 5px; background: #1a73e8; width: 100%; margin-top: 15px; animation: shrink 3s linear forwards; }
     @keyframes shrink { from { width: 100%; } to { width: 0%; } }
   </style>
 </head>
@@ -67,7 +67,7 @@
   </div>
 </div>
 
-<!-- POPUP KẾT QUẢ QUÉT (4 GIÂY) -->
+<!-- POPUP KẾT QUẢ QUÉT (HIỂN THỊ 3 GIÂY) -->
 <div id="overlay">
   <div id="popupCard" class="popup-card">
     <div id="statusIcon" style="font-size: 44px;">✅</div>
@@ -82,7 +82,8 @@
 </div>
 
 <script>
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzX1hDt0TURg-wDd_nbZ_2C3Vb-0g5w7lpsUgK-I_00sK6icyougF_dwK6LpCyaZPuOog/exec";
+  // DÁN LINK WEB APP BẢN TRIỂN KHAI MỚI NHẤT VÀO ĐÂY:
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyUOtNT1PsSGVP5iC4iqdzJmw3HrIBxeJrDpLgLFTGrgwWZeUnvpcDLHu63B0iyx4YToQ/exec";
 
   let currentUser = null;
   let html5QrcodeScanner = null;
@@ -180,7 +181,7 @@
     updatePendingUI();
 
     if (!html5QrcodeScanner) {
-      html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: { width: 240, height: 240 } });
+      html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 15, qrbox: { width: 250, height: 250 } });
       html5QrcodeScanner.render(onScanSuccess);
     }
 
@@ -195,6 +196,11 @@
     const nowTimestamp = Date.now();
     saveScanOffline(decodedText, nowTimestamp);
     syncOfflineData();
+
+    // Tự động giải phóng trạng thái chờ quét sau 3 giây để tiếp tục quét mã tiếp theo
+    setTimeout(() => {
+      isProcessing = false;
+    }, 3000);
   }
 
   function saveScanOffline(decodedText, timestamp) {
@@ -216,17 +222,18 @@
     isSyncing = true;
     const item = queue[0];
 
-    // Tạo hàm callback toàn cục nhận phản hồi từ Apps Script
     window.onSyncItemResp = function(res) {
+      // Nhận được dữ liệu phản hồi từ Apps Script -> Xóa item khỏi hàng chờ ngay lập tức
       const currentQ = getOfflineQueue();
-      currentQ.shift(); // Xóa khỏi hàng chờ ngay lập tức
+      currentQ.shift();
       saveOfflineQueue(currentQ);
       isSyncing = false;
 
       handleResult(res);
 
+      // Nếu còn mã khác trong danh sách hàng chờ -> Tiếp tục đồng bộ
       if (currentQ.length > 0) {
-        syncOfflineData();
+        setTimeout(syncOfflineData, 300);
       }
     };
 
@@ -237,6 +244,7 @@
       scannerName: item.scannerName,
       timestamp: item.timestamp
     }, "onSyncItemResp", function() {
+      // Ngay cả khi lỗi mạng ngắt kết nối -> Bỏ qua item kẹt để tiếp tục đồng bộ
       isSyncing = false;
     });
   }
@@ -250,9 +258,9 @@
 
     timerBar.style.animation = 'none';
     timerBar.offsetHeight; 
-    timerBar.style.animation = 'shrink 4s linear forwards';
+    timerBar.style.animation = 'shrink 3s linear forwards';
 
-    if (res.success) {
+    if (res && res.success) {
       document.getElementById('studentName').innerText = res.student.name;
       document.getElementById('studentClass').innerText = "Lớp: " + res.student.className;
       document.getElementById('studentId').innerText = "Mã số: " + res.student.id;
@@ -272,7 +280,7 @@
       card.className = "popup-card error";
       document.getElementById('statusIcon').innerText = "❌";
       document.getElementById('statusTitle').innerText = "LỖI QUÉT MÃ";
-      document.getElementById('studentName').innerText = res.message;
+      document.getElementById('studentName').innerText = res ? res.message : "Lỗi phản hồi từ Máy chủ";
       document.getElementById('studentClass').innerText = "";
       document.getElementById('studentId').innerText = "";
       document.getElementById('checkTime').innerText = "";
@@ -283,8 +291,7 @@
 
     popupTimeout = setTimeout(() => {
       overlay.style.display = 'none';
-      isProcessing = false;
-    }, 4000);
+    }, 3000);
   }
 
   function showChangePassModal() {
