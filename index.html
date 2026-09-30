@@ -22,8 +22,7 @@
     #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; justify-content: center; align-items: center; }
     .popup-card { background: #fff; color: #333; padding: 25px; border-radius: 16px; width: 85%; max-width: 380px; text-align: center; }
     .popup-card.success { border-top: 8px solid #4caf50; }
-    .popup-card.offline-saved { border-top: 8px solid #2196f3; }
-    .popup-card.duplicate { border-top: 8px solid #ff9800; }
+    .popup-card.overwrite { border-top: 8px solid #ff9800; }
     .popup-card.error { border-top: 8px solid #f44336; }
     .timer-bar { height: 5px; background: #1a73e8; width: 100%; margin-top: 15px; animation: shrink 4s linear forwards; }
     @keyframes shrink { from { width: 100%; } to { width: 0%; } }
@@ -83,8 +82,7 @@
 </div>
 
 <script>
-  // URL GOOGLE APPS SCRIPT WEB APP
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxbwh8VPaEloTQ-rsVHbi70ptLV1aOj7xPHX7Z-mzkfr-fs6gmyM7_YQYx0txknAtumtA/exec";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzqXbtlWx3NnFRtrg3X-_yH23K8WZFzrcVHxBBy8ld53XlUHjHHoajR_lzT8UAjFS_euA/exec";
 
   let currentUser = null;
   let html5QrcodeScanner = null;
@@ -189,27 +187,12 @@
     syncOfflineData();
   }
 
-  // XỬ LÝ QUÉT MÃ QR (ƯU TIÊN PHẢN HỒI NHANH 4 GIÂY)
   function onScanSuccess(decodedText) {
     if (isProcessing) return;
     isProcessing = true;
     playBeep();
 
     const nowTimestamp = Date.now();
-    const d = new Date(nowTimestamp);
-    const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
-
-    // 1. HIỂN THỊ KẾT QUẢ NGAY LẬP TỨC TRÊN MÀN HÌNH (4 GIÂY)
-    handleResult({
-      success: true,
-      offlineSaved: true,
-      student: { name: "QUÉT MÃ THÀNH CÔNG", className: "Mã QR: " + decodedText, id: decodedText },
-      time: timeStr,
-      scanner: currentUser.name,
-      message: "Đã ghi nhận! Dữ liệu đang được đồng bộ lên Google Sheet..."
-    });
-
-    // 2. LƯU VÀO HÀNG CHỜ VÀ ĐẨY LÊN SERVER CHẠY NGẦM
     saveScanOffline(decodedText, nowTimestamp);
     syncOfflineData();
   }
@@ -225,7 +208,6 @@
     saveOfflineQueue(queue);
   }
 
-  // TỰ ĐỘNG ĐỒNG BỘ NGHỆ MẠNG TRONG NỀN
   function syncOfflineData() {
     if (isSyncing || !navigator.onLine) return;
     const queue = getOfflineQueue();
@@ -235,11 +217,15 @@
     const item = queue[0];
 
     window.onSyncItemResp = function(res) {
+      // Đã gửi xong item -> Xóa khỏi hàng chờ
       const currentQ = getOfflineQueue();
       currentQ.shift();
       saveOfflineQueue(currentQ);
       isSyncing = false;
-      
+
+      // Hiển thị kết quả thực tế trả về từ Server
+      handleResult(res);
+
       if (currentQ.length > 0) {
         syncOfflineData();
       }
@@ -256,7 +242,6 @@
     });
   }
 
-  // HIỂN THỊ POPUP VỚI THỜI GIAN 4 GIÂY (4000ms)
   function handleResult(res) {
     const overlay = document.getElementById('overlay');
     const card = document.getElementById('popupCard');
@@ -264,20 +249,25 @@
 
     if (popupTimeout) clearTimeout(popupTimeout);
 
-    // Reset Animation thanh thời gian
     timerBar.style.animation = 'none';
     timerBar.offsetHeight; 
     timerBar.style.animation = 'shrink 4s linear forwards';
 
     if (res.success) {
       document.getElementById('studentName').innerText = res.student.name;
-      document.getElementById('studentClass').innerText = res.student.className;
+      document.getElementById('studentClass').innerText = "Lớp: " + res.student.className;
       document.getElementById('studentId').innerText = "Mã số: " + res.student.id;
       document.getElementById('scannerInfo').innerText = "Người quét: " + res.scanner;
 
-      card.className = "popup-card success";
-      document.getElementById('statusIcon').innerText = "✅";
-      document.getElementById('statusTitle').innerText = "XÁC NHẬN QUÉT THÀNH CÔNG";
+      if (res.overwritten) {
+        card.className = "popup-card overwrite";
+        document.getElementById('statusIcon').innerText = "🔄";
+        document.getElementById('statusTitle').innerText = "ĐÃ CẬP NHẬT TỪ VẮNG SANG ĐIỂM DANH";
+      } else {
+        card.className = "popup-card success";
+        document.getElementById('statusIcon').innerText = "✅";
+        document.getElementById('statusTitle').innerText = "ĐIỂM DANH THÀNH CÔNG";
+      }
       document.getElementById('checkTime').innerText = "Thời gian: " + res.time;
     } else {
       card.className = "popup-card error";
@@ -292,7 +282,6 @@
 
     overlay.style.display = 'flex';
 
-    // TĂNG THỜI GIAN HIỂN THỊ LÊN 4 GIÂY
     popupTimeout = setTimeout(() => {
       overlay.style.display = 'none';
       isProcessing = false;
