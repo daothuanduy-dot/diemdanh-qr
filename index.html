@@ -7,7 +7,7 @@
 
   <!-- Bootstrap 5 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!-- HTML5 QR Code Scanner Library -->
+  <!-- Thư viện Quét QR HTML5 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 
   <style>
@@ -15,10 +15,10 @@
     .card-custom { border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); border: none; }
     #loginScreen { max-width: 420px; margin: 50px auto; }
     
-    /* Style Scanner QR */
+    /* Frame Camera QR */
     #qr-reader {
       width: 100%;
-      max-width: 500px;
+      max-width: 480px;
       margin: 0 auto;
       border-radius: 12px;
       overflow: hidden;
@@ -26,7 +26,7 @@
     }
     #qr-reader video { object-fit: cover !important; border-radius: 8px; }
 
-    /* Overlay Popup 4 Giây */
+    /* Overlay Popup Kết Quả 4 Giây */
     .popup-overlay {
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
@@ -37,7 +37,7 @@
       z-index: 9999;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.3s ease;
+      transition: opacity 0.25s ease;
     }
     .popup-overlay.show {
       opacity: 1;
@@ -48,7 +48,7 @@
       border-radius: 16px;
       padding: 24px;
       width: 90%;
-      max-width: 440px;
+      max-width: 420px;
       text-align: center;
       box-shadow: 0 10px 30px rgba(0,0,0,0.3);
       animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -58,6 +58,7 @@
       to { transform: scale(1); opacity: 1; }
     }
 
+    /* Thanh Đếm Ngược 4 Giây */
     .countdown-bar {
       height: 4px;
       background: #0d6efd;
@@ -83,7 +84,7 @@
     
     <div class="mb-3">
       <label class="fw-bold form-label">Mã Cán Bộ / Số Định Danh:</label>
-      <input type="text" id="loginUser" class="form-control" placeholder="Nhập tài khoản...">
+      <input type="text" id="loginUser" class="form-control" placeholder="Nhập mã số cán bộ...">
     </div>
 
     <div class="mb-3">
@@ -107,7 +108,7 @@
   </div>
 
 
-  <!-- ==================== 2. MÀN HÌNH CHÍNH (QUÉT MÃ QR) ==================== -->
+  <!-- ==================== 2. MÀN HÌNH CHÍNH (QUÉT QR) ==================== -->
   <div id="mainScreen" style="display: none;">
     <div class="card card-custom p-3 p-md-4 mb-3">
       <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 border-bottom pb-3 mb-3">
@@ -124,7 +125,6 @@
         </div>
       </div>
 
-      <!-- CAMERA SCANNER CONTAINER -->
       <div class="text-center mb-3">
         <div id="qr-reader"></div>
         <div id="cameraStatus" class="mt-2 text-muted small fw-semibold">⏳ Đang khởi tạo camera...</div>
@@ -135,7 +135,6 @@
         <button id="btnStopCam" onclick="stopScanner()" class="btn btn-secondary fw-bold btn-sm" disabled>Tắt Camera</button>
       </div>
 
-      <!-- BẢNG NHẬT KÝ QUÉT TRONG PHIÊN -->
       <h6 class="fw-bold text-dark mt-3 mb-2">📋 Lịch Sử Quét Trong Phiên</h6>
       <div class="table-responsive">
         <table class="table table-bordered table-striped text-center align-middle small">
@@ -161,16 +160,16 @@
 </div>
 
 
-<!-- ==================== POPUP KẾT QUẢ QUÉT 4 GIÂY ==================== -->
+<!-- POPUP HIỂN THỊ KẾT QUẢ QUÉT 4 GIÂY -->
 <div id="qrResultPopup" class="popup-overlay">
   <div class="popup-card">
     <div id="popupIcon" class="fs-1 mb-2">✅</div>
     <h5 id="popupStudentName" class="fw-bold text-primary mb-1">NGUYỄN VĂN A</h5>
     <div id="popupStudentSub" class="text-muted small mb-2">Mã HS: 12345 | Lớp: 10C1</div>
     
-    <div id="popupBadge" class="badge bg-danger fs-6 p-2 mb-2">Đi học muộn (Không phép) (-2đ)</div>
-    <div id="popupMessage" class="fw-bold text-success small mb-2"> Chuyển trạng thái từ VẮNG ➔ ĐI HỌC MUỘN</div>
-    <div id="popupTime" class="text-muted micro-text small">Thời gian: 02/10/2026 07:15:30</div>
+    <div id="popupBadge" class="badge bg-danger fs-6 p-2 mb-2">Đi học muộn (-2đ)</div>
+    <div id="popupMessage" class="fw-bold text-success small mb-2">Ghi nhận thành công</div>
+    <div id="popupTime" class="text-muted small">Thời gian: 02/10/2026 07:15:30</div>
 
     <div class="countdown-bar" id="countdownBar"></div>
   </div>
@@ -222,14 +221,11 @@
   </div>
 </div>
 
-
-<!-- JS Bootstrap 5 -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
   // =========================================================================
-  // CẤU HÌNH LIÊN KẾT GOOGLE APPS SCRIPT WEB APP
-  // Dán URL Triển Khai (Web App Exec URL) của bạn vào biến bên dưới:
+  // LINK GOOGLE APPS SCRIPT ĐÃ ĐƯỢC CẤU HÌNH CHÍNH XÁC:
   // =========================================================================
   const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyhyqhBf-8742c3_mapijmDCU8pOH9NfnZcibDn5o56LkX2cNMSiqOQGrdN0XtUtip2/exec";
 
@@ -246,22 +242,47 @@
     }
   };
 
-  // GỬI REQUEST API TỚI GOOGLE APPS SCRIPT (CÓ HOÀN TÁC CORS PHÙ HỢP)
-  async function callApi(data) {
-    try {
-      const response = await fetch(APPS_SCRIPT_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(data)
-      });
-      return await response.json();
-    } catch (err) {
-      console.error("Lỗi API Fetch:", err);
-      return { success: false, message: "Không thể kết nối đến máy chủ Google Script!" };
-    }
+  // CƠ CHẾ KẾT NỐI CHỐNG LỖI CORS 100% (JSONP QUA THE SCRIPT)
+  function callApi(data) {
+    return new Promise((resolve) => {
+      const callbackName = "jsonp_cb_" + Math.floor(Math.random() * 1000000);
+      const script = document.createElement("script");
+
+      const params = new URLSearchParams();
+      for (const key in data) {
+        if (data.hasOwnProperty(key)) {
+          params.append(key, data[key]);
+        }
+      }
+      params.append("callback", callbackName);
+
+      const timeoutId = setTimeout(() => {
+        cleanup();
+        resolve({ success: false, message: "Kết nối quá thời gian chờ (Timeout)! Vui lòng thử lại." });
+      }, 15000);
+
+      function cleanup() {
+        if (window[callbackName]) delete window[callbackName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+        clearTimeout(timeoutId);
+      }
+
+      window[callbackName] = function(response) {
+        cleanup();
+        resolve(response);
+      };
+
+      script.onerror = function() {
+        cleanup();
+        resolve({ success: false, message: "Không thể kết nối đến máy chủ Google Script!" });
+      };
+
+      script.src = `${APPS_SCRIPT_URL}?${params.toString()}`;
+      document.body.appendChild(script);
+    });
   }
 
-  // 1. XỬ LÝ ĐĂNG NHẬP
+  // 1. ĐĂNG NHẬP
   async function handleLogin() {
     const u = document.getElementById("loginUser").value.trim();
     const p = document.getElementById("loginPass").value.trim();
@@ -286,7 +307,7 @@
       showMainScreen();
     } else {
       errEl.className = "text-danger text-center fw-bold mt-3 small";
-      errEl.innerText = res.message || "Đăng nhập thất bại!";
+      errEl.innerText = (res && res.message) ? res.message : "Đăng nhập thất bại!";
     }
   }
 
@@ -306,7 +327,7 @@
     location.reload();
   }
 
-  // 2. KHỞI TẠO CAMERA QUÉT MÃ QR
+  // 2. BẬT / TẮT CAMERA QUÉT QR
   function startScanner() {
     if (html5QrcodeScanner) return;
 
@@ -341,19 +362,15 @@
     }
   }
 
-  function onScanError(errorMessage) {
-    // Bỏ qua các lỗi đọc khung hình rác hàng giây
-  }
+  function onScanError(errorMessage) {}
 
-  // 3. XỬ LÝ KHI QUÉT MÃ QR THÀNH CÔNG
+  // 3. XỬ LÝ QUÉT MÃ QR THÀNH CÔNG
   async function onScanSuccess(decodedText, decodedResult) {
-    if (isScanningCooldown) return; // Tránh quét lặp lại khi popup đang hiển thị
+    if (isScanningCooldown) return;
     isScanningCooldown = true;
 
-    // Phát âm thanh bip phản hồi (tùy chọn)
     playBeepSound();
-
-    document.getElementById("cameraStatus").innerText = "⏳ Đang xử lý ghi nhận đi muộn...";
+    document.getElementById("cameraStatus").innerText = "⏳ Đang ghi nhận đi học muộn...";
 
     const res = await callApi({
       action: "checkIn",
@@ -374,7 +391,7 @@
     document.getElementById("cameraStatus").innerText = "🟢 Camera sẵn sàng quét lượt tiếp theo...";
   }
 
-  // 4. HIỂN THỊ POPUP THÔNG BÁO KẾT QUẢ TRONG 4 GIÂY
+  // 4. HIỂN THỊ POPUP KẾT QUẢ 4 GIÂY
   function showSuccessPopup4s(res) {
     const popup = document.getElementById("qrResultPopup");
     document.getElementById("popupStudentName").innerText = res.student.name;
@@ -383,10 +400,9 @@
     document.getElementById("popupMessage").innerText = `📌 ${res.message}`;
     document.getElementById("popupTime").innerText = `Thời gian: ${res.time}`;
 
-    // Reset thanh đếm ngược animation
     const bar = document.getElementById("countdownBar");
     bar.style.animation = 'none';
-    bar.offsetHeight; /* trigger reflow */
+    bar.offsetHeight;
     bar.style.animation = 'shrinkBar 4s linear forwards';
 
     popup.classList.add("show");
@@ -394,11 +410,11 @@
     if (popupTimer) clearTimeout(popupTimer);
     popupTimer = setTimeout(() => {
       popup.classList.remove("show");
-      isScanningCooldown = false; // Mở lại khả năng quét lượt mới sau 4 giây
+      isScanningCooldown = false;
     }, 4000);
   }
 
-  // 5. GHI NHẬT KÝ QUÉT VÀO BẢNG TẠM TRÊN GIAO DIỆN
+  // 5. CẬP NHẬT BẢNG NHẬT KÝ LẦN QUÉT
   function addScanLog(res) {
     const emptyRow = document.getElementById("emptyLogRow");
     if (emptyRow) emptyRow.remove();
@@ -418,7 +434,7 @@
     tbody.insertBefore(tr, tbody.firstChild);
   }
 
-  // 6. ÂM THANH BÍP PHẢN HỒI
+  // 6. ÂM THANH PHẢN HỒI PING
   function playBeepSound() {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -431,7 +447,7 @@
     } catch(e) {}
   }
 
-  // 7. CÁC HÀM ĐỔI MẬT KHẨU & OTP
+  // 7. CÁC HÀM XỬ LÝ MẬT KHẨU & OTP
   async function handleRequestOTP() {
     const u = document.getElementById("forgotUsername").value.trim();
     if (!u) { alert("Vui lòng nhập mã cán bộ!"); return; }
