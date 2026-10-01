@@ -49,25 +49,14 @@
     <div style="display: flex; justify-content: space-between; align-items: center;">
       <span id="userInfo" style="font-weight: bold; color: #64b5f6;"></span>
       <div>
-        <button onclick="showChangePassModal()" class="alt" style="width: auto; padding: 6px 10px; font-size: 12px;">Đổi mật khẩu</button>
         <button onclick="handleLogout()" class="alt" style="width: auto; padding: 6px 10px; font-size: 12px; background: #c62828;">Đăng xuất</button>
       </div>
     </div>
     <div id="reader"></div>
   </div>
-
-  <!-- MÀN HÌNH ĐỔI MẬT KHẨU -->
-  <div id="changePassView" class="card" style="display: none;">
-    <h3>ĐỔI MẬT KHẨU</h3>
-    <input type="password" id="oldPass" placeholder="Mật khẩu hiện tại">
-    <input type="password" id="newPass" placeholder="Mật khẩu mới">
-    <button onclick="handleChangePassword()">XÁC NHẬN ĐỔI MẬT KHẨU</button>
-    <button onclick="cancelChangePass()" class="alt">HỦY BỎ</button>
-    <div id="changePassMsg" style="margin-top: 10px; font-size: 14px;"></div>
-  </div>
 </div>
 
-<!-- POPUP KẾT QUẢ QUÉT (HIỂN THỊ 3 GIÂY) -->
+<!-- POPUP HIỂN THỊ TRẠNG THÁI GHI ĐÈ / THÀNH CÔNG -->
 <div id="overlay">
   <div id="popupCard" class="popup-card">
     <div id="statusIcon" style="font-size: 44px;">✅</div>
@@ -82,8 +71,8 @@
 </div>
 
 <script>
-  // DÁN LINK WEB APP BẢN TRIỂN KHAI MỚI NHẤT VÀO ĐÂY:
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyUOtNT1PsSGVP5iC4iqdzJmw3HrIBxeJrDpLgLFTGrgwWZeUnvpcDLHu63B0iyx4YToQ/exec";
+  // 🔴 THAY BẰNG URL WEB APP CỦA BẠN NẾU CÓ THAY ĐỔI
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzqXbtlWx3NnFRtrg3X-_yH23K8WZFzrcVHxBBy8ld53XlUHjHHoajR_lzT8UAjFS_euA/exec";
 
   let currentUser = null;
   let html5QrcodeScanner = null;
@@ -112,7 +101,7 @@
       syncOfflineData();
     } else {
       badge.className = "status-badge offline";
-      badge.innerText = "📡 Mạng yếu / Offline";
+      badge.innerText = "📡 Offline (Đã lưu máy)";
     }
     updatePendingUI();
   }
@@ -154,7 +143,7 @@
   function handleLogin() {
     const u = document.getElementById("username").value.trim();
     const p = document.getElementById("password").value.trim();
-    if (!u || !p) return alert("Vui lòng nhập đầy đủ Số định danh và Mật khẩu!");
+    if (!u || !p) return alert("Vui lòng nhập đầy đủ Tài khoản và Mật khẩu!");
 
     document.getElementById("loginError").innerText = "Đang xác thực...";
     callAPI({ action: "login", username: u, password: p }, "onLoginResp", function() {
@@ -175,7 +164,6 @@
 
   function showMainView() {
     document.getElementById("loginView").style.display = "none";
-    document.getElementById("changePassView").style.display = "none";
     document.getElementById("mainView").style.display = "block";
     document.getElementById("userInfo").innerText = `${currentUser.name} (${currentUser.role})`;
     updatePendingUI();
@@ -197,10 +185,9 @@
     saveScanOffline(decodedText, nowTimestamp);
     syncOfflineData();
 
-    // Tự động giải phóng trạng thái chờ quét sau 3 giây để tiếp tục quét mã tiếp theo
     setTimeout(() => {
       isProcessing = false;
-    }, 3000);
+    }, 2500);
   }
 
   function saveScanOffline(decodedText, timestamp) {
@@ -223,7 +210,6 @@
     const item = queue[0];
 
     window.onSyncItemResp = function(res) {
-      // Nhận được dữ liệu phản hồi từ Apps Script -> Xóa item khỏi hàng chờ ngay lập tức
       const currentQ = getOfflineQueue();
       currentQ.shift();
       saveOfflineQueue(currentQ);
@@ -231,9 +217,8 @@
 
       handleResult(res);
 
-      // Nếu còn mã khác trong danh sách hàng chờ -> Tiếp tục đồng bộ
       if (currentQ.length > 0) {
-        setTimeout(syncOfflineData, 300);
+        setTimeout(syncOfflineData, 200);
       }
     };
 
@@ -244,7 +229,6 @@
       scannerName: item.scannerName,
       timestamp: item.timestamp
     }, "onSyncItemResp", function() {
-      // Ngay cả khi lỗi mạng ngắt kết nối -> Bỏ qua item kẹt để tiếp tục đồng bộ
       isSyncing = false;
     });
   }
@@ -266,6 +250,7 @@
       document.getElementById('studentId').innerText = "Mã số: " + res.student.id;
       document.getElementById('scannerInfo').innerText = "Người quét: " + res.scanner;
 
+      // HIỂN THỊ THÔNG BÁO TƯƠNG ỨNG KHI GHI ĐÈ
       if (res.overwritten) {
         card.className = "popup-card overwrite";
         document.getElementById('statusIcon').innerText = "🔄";
@@ -280,7 +265,7 @@
       card.className = "popup-card error";
       document.getElementById('statusIcon').innerText = "❌";
       document.getElementById('statusTitle').innerText = "LỖI QUÉT MÃ";
-      document.getElementById('studentName').innerText = res ? res.message : "Lỗi phản hồi từ Máy chủ";
+      document.getElementById('studentName').innerText = res ? res.message : "Lỗi kết nối";
       document.getElementById('studentClass').innerText = "";
       document.getElementById('studentId').innerText = "";
       document.getElementById('checkTime').innerText = "";
@@ -292,46 +277,6 @@
     popupTimeout = setTimeout(() => {
       overlay.style.display = 'none';
     }, 3000);
-  }
-
-  function showChangePassModal() {
-    document.getElementById("mainView").style.display = "none";
-    document.getElementById("changePassView").style.display = "block";
-  }
-
-  function cancelChangePass() {
-    showMainView();
-  }
-
-  function handleChangePassword() {
-    const oldP = document.getElementById("oldPass").value.trim();
-    const newP = document.getElementById("newPass").value.trim();
-    if (!oldP || !newP) return alert("Vui lòng điền đầy đủ mật khẩu cũ và mới!");
-
-    document.getElementById("changePassMsg").style.color = "#ffeb3b";
-    document.getElementById("changePassMsg").innerText = "Đang cập nhật...";
-
-    callAPI({
-      action: "changePassword",
-      username: currentUser.id,
-      oldPassword: oldP,
-      newPassword: newP
-    }, "onChangePassResp");
-  }
-
-  function onChangePassResp(data) {
-    if (data.success) {
-      document.getElementById("changePassMsg").style.color = "#4caf50";
-      document.getElementById("changePassMsg").innerText = data.message;
-      setTimeout(() => {
-        document.getElementById("oldPass").value = "";
-        document.getElementById("newPass").value = "";
-        showMainView();
-      }, 1500);
-    } else {
-      document.getElementById("changePassMsg").style.color = "#f44336";
-      document.getElementById("changePassMsg").innerText = data.message;
-    }
   }
 
   function handleLogout() {
