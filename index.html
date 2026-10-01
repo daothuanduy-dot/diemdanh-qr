@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hệ Thống Quét Mã QR & Điểm Danh v5.0</title>
+  <title>Hệ Thống Quét Mã QR & Điểm Danh v5.2</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     * { box-sizing: border-box; }
@@ -48,8 +48,8 @@
     <h2 style="color: #4caf50;">ĐĂNG NHẬP HỆ THỐNG</h2>
     <input type="text" id="username" placeholder="Số định danh / Mã cán bộ">
     <input type="password" id="password" placeholder="Mật khẩu">
-    <button onclick="handleLogin()">ĐĂNG NHẬP</button>
-    <div id="loginError" style="color: #f44336; margin-top: 10px; font-size: 14px;"></div>
+    <button id="loginBtn" onclick="handleLogin()">ĐĂNG NHẬP</button>
+    <div id="loginError" style="color: #ff9800; margin-top: 12px; font-size: 14px; font-weight: bold;"></div>
   </div>
 
   <!-- MÀN HÌNH QUÉT QR -->
@@ -115,6 +115,69 @@
     }
   };
 
+  // HÀM CALLBACK ĐĂNG NHẬP TOÀN CỤC (GLOBAL CALLBACK)
+  window.onLoginResp = function(data) {
+    const btn = document.getElementById("loginBtn");
+    const errEl = document.getElementById("loginError");
+    btn.disabled = false;
+
+    if (data && data.success) {
+      currentUser = data.user;
+      localStorage.setItem("user", JSON.stringify(currentUser));
+      errEl.innerText = "";
+      showMainView();
+    } else {
+      errEl.innerText = data ? data.message : "Mật khẩu hoặc tài khoản không đúng!";
+    }
+  };
+
+  function handleLogin() {
+    const u = document.getElementById("username").value.trim();
+    const p = document.getElementById("password").value.trim();
+    const btn = document.getElementById("loginBtn");
+    const errEl = document.getElementById("loginError");
+
+    if (!u || !p) {
+      alert("Vui lòng nhập đầy đủ Số định danh và Mật khẩu!");
+      return;
+    }
+
+    btn.disabled = true;
+    errEl.style.color = "#ff9800";
+    errEl.innerText = "⏳ Đang xác thực dữ liệu...";
+
+    // TIMEOUT 6 GIÂY NẾU KHÔNG CÓ PHẢN HỒI
+    const loginTimeout = setTimeout(() => {
+      btn.disabled = false;
+      errEl.style.color = "#f44336";
+      errEl.innerText = "❌ Lỗi kết nối máy chủ! Vui lòng kiểm tra lại mạng.";
+    }, 6000);
+
+    // Ghi đè callback để clear timeout khi có dữ liệu
+    const originalCallback = window.onLoginResp;
+    window.onLoginResp = function(data) {
+      clearTimeout(loginTimeout);
+      originalCallback(data);
+    };
+
+    callAPI({ action: "login", username: u, password: p }, "onLoginResp");
+  }
+
+  function callAPI(params, callbackName) {
+    const oldScript = document.getElementById('jsonp_script');
+    if (oldScript) oldScript.remove();
+
+    let url = SCRIPT_URL + "?callback=" + callbackName + "&_nc=" + Date.now();
+    for (let key in params) {
+      url += "&" + key + "=" + encodeURIComponent(params[key]);
+    }
+
+    const script = document.createElement('script');
+    script.id = 'jsonp_script';
+    script.src = url;
+    document.body.appendChild(script);
+  }
+
   function updateNetworkStatus() {
     const badge = document.getElementById('networkStatus');
     if (!badge) return;
@@ -151,40 +214,6 @@
     }
   }
 
-  function callAPI(params, callbackName) {
-    const oldScript = document.getElementById('jsonp_script');
-    if (oldScript) oldScript.remove();
-
-    let url = SCRIPT_URL + "?callback=" + callbackName + "&_nc=" + Date.now();
-    for (let key in params) {
-      url += "&" + key + "=" + encodeURIComponent(params[key]);
-    }
-
-    const script = document.createElement('script');
-    script.id = 'jsonp_script';
-    script.src = url;
-    document.body.appendChild(script);
-  }
-
-  function handleLogin() {
-    const u = document.getElementById("username").value.trim();
-    const p = document.getElementById("password").value.trim();
-    if (!u || !p) return alert("Vui lòng nhập đầy đủ Tài khoản và Mật khẩu!");
-
-    document.getElementById("loginError").innerText = "Đang xác thực...";
-    window.onLoginResp = function(data) {
-      if (data.success) {
-        currentUser = data.user;
-        localStorage.setItem("user", JSON.stringify(currentUser));
-        document.getElementById("loginError").innerText = "";
-        showMainView();
-      } else {
-        document.getElementById("loginError").innerText = data.message;
-      }
-    };
-    callAPI({ action: "login", username: u, password: p }, "onLoginResp");
-  }
-
   function showMainView() {
     document.getElementById("loginView").style.display = "none";
     document.getElementById("mainView").style.display = "block";
@@ -199,7 +228,6 @@
     syncOfflineData();
   }
 
-  // BÓC TÁCH MÃ HỌC SINH TỪ CHUỖI QR
   function parseStudentCode(qrContent) {
     let code = qrContent ? qrContent.toString().trim() : "";
     if (code.indexOf("Mã HS:") !== -1) {
@@ -221,14 +249,10 @@
     const studentCode = parseStudentCode(decodedText);
     const dateFormatted = new Date(nowTimestamp).toLocaleTimeString('vi-VN');
 
-    // 1. BẬT NGAY POPUP THÔNG BÁO CHO NGƯỜI QUÉT (0.1 GIÂY)
     showSuccessPopup(studentCode, dateFormatted);
-
-    // 2. LƯU VÀO HÀNG CHỜ VÀ ĐẨY LÊN GOOGLE SHEET NGẦM
     saveScanOffline(decodedText, nowTimestamp);
     syncOfflineData();
 
-    // 3. MỞ KHÓA MÁY QUÉT ĐỂ SẴN SÀNG QUÉT HỌC SINH TIẾP THEO SAU 2.5 GIÂY
     setTimeout(() => {
       isProcessing = false;
     }, 2500);
@@ -251,7 +275,6 @@
 
     overlay.style.display = 'flex';
 
-    // ĐÓNG POPUP SAU ĐÚNG 4 GIÂY
     popupTimeout = setTimeout(() => {
       overlay.style.display = 'none';
     }, 4000);
@@ -279,12 +302,11 @@
     window.onSyncItemResp = function(res) {
       const currentQ = getOfflineQueue();
       if (currentQ.length > 0) {
-        currentQ.shift(); // XÓA BẢN GHI ĐÃ ĐỒNG BỘ THÀNH CÔNG
+        currentQ.shift();
         saveOfflineQueue(currentQ);
       }
       isSyncing = false;
 
-      // TIẾP TỤC ĐỒNG BỘ MỤC TIẾP THEO NẾU CÒN TRONG HÀNG CHỜ
       if (getOfflineQueue().length > 0) {
         setTimeout(syncOfflineData, 200);
       }
@@ -298,7 +320,6 @@
       timestamp: item.timestamp
     }, "onSyncItemResp");
 
-    // TỰ GIẢI PHÓNG BIẾN KẸT NẾU MẠNG CHẬP CHỜN QUÁ 5 GIÂY
     setTimeout(() => {
       if (isSyncing) {
         isSyncing = false;
@@ -306,7 +327,6 @@
     }, 5000);
   }
 
-  // --- QUẢN LÝ MODAL XEM DANH SÁCH CÁC MỤC CHỜ ĐỒNG BỘ ---
   function openQueueModal() {
     const q = getOfflineQueue();
     const listEl = document.getElementById("queueList");
