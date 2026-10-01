@@ -15,7 +15,6 @@
     .card-custom { border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); border: none; }
     #loginScreen { max-width: 420px; margin: 50px auto; }
     
-    /* Frame Camera QR */
     #qr-reader {
       width: 100%;
       max-width: 480px;
@@ -26,7 +25,6 @@
     }
     #qr-reader video { object-fit: cover !important; border-radius: 8px; }
 
-    /* Overlay Popup Kết Quả 4 Giây */
     .popup-overlay {
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
@@ -58,7 +56,6 @@
       to { transform: scale(1); opacity: 1; }
     }
 
-    /* Thanh Đếm Ngược 4 Giây */
     .countdown-bar {
       height: 4px;
       background: #0d6efd;
@@ -80,8 +77,13 @@
   <!-- ==================== 1. MÀN HÌNH ĐĂNG NHẬP ==================== -->
   <div id="loginScreen" class="card card-custom p-4">
     <h4 class="text-primary text-center fw-bold mb-3">ĐĂNG NHẬP HỆ THỐNG</h4>
-    <p class="text-center text-muted small mb-4">Trình Quét Mã QR Học Sinh Đi Học Muộn</p>
+    <p class="text-center text-muted small mb-3">Trình Quét Mã QR Học Sinh Đi Học Muộn</p>
     
+    <!-- THANH KIỂM TRA TÌNH TRẠNG KẾT NỐI MÁY CHỦ -->
+    <div id="connectionStatus" class="alert alert-info py-2 text-center small fw-bold mb-3">
+      🔍 Đang kiểm tra kết nối tới máy chủ Google...
+    </div>
+
     <div class="mb-3">
       <label class="fw-bold form-label">Mã Cán Bộ / Số Định Danh:</label>
       <input type="text" id="loginUser" class="form-control" placeholder="Nhập mã số cán bộ...">
@@ -90,7 +92,7 @@
     <div class="mb-3">
       <label class="fw-bold form-label">Mật Khẩu:</label>
       <div class="input-group">
-        <input type="password" id="loginPass" class="form-control" placeholder="Mật khẩu (Mặc định: 123456)...">
+        <input type="password" id="loginPass" class="form-control" placeholder="Nhập mật khẩu...">
         <button class="btn btn-outline-secondary" type="button" onclick="togglePass('loginPass')">👁️</button>
       </div>
     </div>
@@ -160,7 +162,7 @@
 </div>
 
 
-<!-- POPUP HIỂN THỊ KẾT QUẢ QUÉT 4 GIÂY -->
+<!-- POPUP KẾT QUẢ QUÉT 4 GIÂY -->
 <div id="qrResultPopup" class="popup-overlay">
   <div class="popup-card">
     <div id="popupIcon" class="fs-1 mb-2">✅</div>
@@ -225,9 +227,9 @@
 
 <script>
   // =========================================================================
-  // LINK GOOGLE APPS SCRIPT ĐÃ ĐƯỢC CẤU HÌNH CHÍNH XÁC:
+  // URL GOOGLE APPS SCRIPT WEB APP CỦA BẠN:
   // =========================================================================
-  const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyhyqhBf-8742c3_mapijmDCU8pOH9NfnZcibDn5o56LkX2cNMSiqOQGrdN0XtUtip2/exec";
+  const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyaiwPVqnsqRvv6VNwRC3QPmQ-3ArF8wTjJhVRJfzyrbv7iGhx8ExiIWw18OHlgXzpwmw/exec";
 
   let currentUser = null;
   let html5QrcodeScanner = null;
@@ -235,6 +237,8 @@
   let popupTimer = null;
 
   window.onload = function() {
+    testConnection();
+
     const saved = localStorage.getItem("app_qr_user_session");
     if (saved) {
       currentUser = JSON.parse(saved);
@@ -242,7 +246,7 @@
     }
   };
 
-  // CƠ CHẾ KẾT NỐI CHỐNG LỖI CORS 100% (JSONP QUA THE SCRIPT)
+  // CƠ CHẾ KẾT NỐI JSONP CHỐNG BỊ TRÌNH DUYỆT CHẶN CORS 100%
   function callApi(data) {
     return new Promise((resolve) => {
       const callbackName = "jsonp_cb_" + Math.floor(Math.random() * 1000000);
@@ -250,7 +254,7 @@
 
       const params = new URLSearchParams();
       for (const key in data) {
-        if (data.hasOwnProperty(key)) {
+        if (data.hasOwnProperty(key) && data[key] !== undefined && data[key] !== null) {
           params.append(key, data[key]);
         }
       }
@@ -258,7 +262,10 @@
 
       const timeoutId = setTimeout(() => {
         cleanup();
-        resolve({ success: false, message: "Kết nối quá thời gian chờ (Timeout)! Vui lòng thử lại." });
+        resolve({ 
+          success: false, 
+          message: "Kết nối quá 15 giây! Kiểm tra lại mạng hoặc cập nhật Phiên bản mới trên Apps Script." 
+        });
       }, 15000);
 
       function cleanup() {
@@ -274,12 +281,30 @@
 
       script.onerror = function() {
         cleanup();
-        resolve({ success: false, message: "Không thể kết nối đến máy chủ Google Script!" });
+        resolve({ 
+          success: false, 
+          message: "Không thể kết nối đến máy chủ Google Script! Vui lòng kiểm tra lại quyền truy cập 'Bất kỳ ai' (Anyone)." 
+        });
       };
 
       script.src = `${APPS_SCRIPT_URL}?${params.toString()}`;
       document.body.appendChild(script);
     });
+  }
+
+  // THỬ TÌNH TRẠNG KẾT NỐI KHI TẢI TRANG
+  async function testConnection() {
+    const statusEl = document.getElementById("connectionStatus");
+    if (!statusEl) return;
+
+    const res = await callApi({ action: "ping" });
+    if (res && res.success) {
+      statusEl.className = "alert alert-success py-2 text-center small fw-bold mb-3";
+      statusEl.innerText = "🟢 Kết nối thành công tới máy chủ Google Apps Script!";
+    } else {
+      statusEl.className = "alert alert-danger py-2 text-center small fw-bold mb-3";
+      statusEl.innerText = "🔴 " + (res ? res.message : "Chưa thể kết nối máy chủ Google Script");
+    }
   }
 
   // 1. ĐĂNG NHẬP
@@ -289,7 +314,7 @@
     const errEl = document.getElementById("loginError");
     const btn = document.getElementById("loginBtn");
 
-    if (!u || !p) { errEl.innerText = "Vui lòng nhập tài khoản và mật khẩu!"; return; }
+    if (!u || !p) { errEl.innerText = "Vui lòng nhập đầy đủ tài khoản và mật khẩu!"; return; }
 
     btn.disabled = true;
     errEl.className = "text-warning text-center fw-bold mt-3 small";
@@ -391,7 +416,7 @@
     document.getElementById("cameraStatus").innerText = "🟢 Camera sẵn sàng quét lượt tiếp theo...";
   }
 
-  // 4. HIỂN THỊ POPUP KẾT QUẢ 4 GIÂY
+  // 4. POPUP THÔNG BÁO 4 GIÂY
   function showSuccessPopup4s(res) {
     const popup = document.getElementById("qrResultPopup");
     document.getElementById("popupStudentName").innerText = res.student.name;
@@ -414,7 +439,6 @@
     }, 4000);
   }
 
-  // 5. CẬP NHẬT BẢNG NHẬT KÝ LẦN QUÉT
   function addScanLog(res) {
     const emptyRow = document.getElementById("emptyLogRow");
     if (emptyRow) emptyRow.remove();
@@ -434,7 +458,6 @@
     tbody.insertBefore(tr, tbody.firstChild);
   }
 
-  // 6. ÂM THANH PHẢN HỒI PING
   function playBeepSound() {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -447,7 +470,7 @@
     } catch(e) {}
   }
 
-  // 7. CÁC HÀM XỬ LÝ MẬT KHẨU & OTP
+  // 5. CÁC HÀM XỬ LÝ MẬT KHẨU & OTP
   async function handleRequestOTP() {
     const u = document.getElementById("forgotUsername").value.trim();
     if (!u) { alert("Vui lòng nhập mã cán bộ!"); return; }
