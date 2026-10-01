@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hệ Thống Quét Mã QR & Điểm Danh v5.2</title>
+  <title>Hệ Thống Quét Mã QR & Điểm Danh v5.3</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     * { box-sizing: border-box; }
@@ -66,7 +66,7 @@
   </div>
 </div>
 
-<!-- POPUP THÔNG BÁO QUÉT THÀNH CÔNG (HIỂN THỊ 4 GIÂY) -->
+<!-- POPUP THÔNG BÁO QUÉT THÀNH CÔNG -->
 <div id="overlay">
   <div id="popupCard" class="popup-card success">
     <div style="font-size: 48px;">✅</div>
@@ -79,7 +79,7 @@
   </div>
 </div>
 
-<!-- MODAL XEM DANH SÁCH HỌC SINH CHỜ ĐỒNG BỘ -->
+<!-- MODAL XEM DANH SÁCH CHỜ ĐỒNG BỘ -->
 <div id="queueModal">
   <div class="modal-card">
     <h3 style="margin: 0; color: #ffca28;">📋 Danh Sách Chờ Đồng Bộ</h3>
@@ -95,6 +95,7 @@
 </div>
 
 <script>
+  // URL Web App Google Apps Script
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzUtD3ofocOUbLebcB7vlFkmM2AZedjlWKGkB9xhRb5xSnDjqttigOqbX_lFvSMtpJsZg/exec";
 
   let currentUser = null;
@@ -102,6 +103,7 @@
   let isProcessing = false;
   let isSyncing = false;
   let popupTimeout = null;
+  let loginTimer = null;
 
   window.onload = function() {
     updateNetworkStatus();
@@ -115,8 +117,10 @@
     }
   };
 
-  // HÀM CALLBACK ĐĂNG NHẬP TOÀN CỤC (GLOBAL CALLBACK)
+  // NGUYÊN TẮC CHUẨN ĐỊNH NGHĨA CALLBACK TOÀN CỤC KHÔNG ĐỔI
   window.onLoginResp = function(data) {
+    if (loginTimer) clearTimeout(loginTimer);
+    
     const btn = document.getElementById("loginBtn");
     const errEl = document.getElementById("loginError");
     btn.disabled = false;
@@ -127,7 +131,8 @@
       errEl.innerText = "";
       showMainView();
     } else {
-      errEl.innerText = data ? data.message : "Mật khẩu hoặc tài khoản không đúng!";
+      errEl.style.color = "#f44336";
+      errEl.innerText = (data && data.message) ? data.message : "Tài khoản hoặc mật khẩu không chính xác!";
     }
   };
 
@@ -146,24 +151,19 @@
     errEl.style.color = "#ff9800";
     errEl.innerText = "⏳ Đang xác thực dữ liệu...";
 
-    // TIMEOUT 6 GIÂY NẾU KHÔNG CÓ PHẢN HỒI
-    const loginTimeout = setTimeout(() => {
+    // Đặt timeout 10 giây dự phòng
+    if (loginTimer) clearTimeout(loginTimer);
+    loginTimer = setTimeout(() => {
       btn.disabled = false;
       errEl.style.color = "#f44336";
-      errEl.innerText = "❌ Lỗi kết nối máy chủ! Vui lòng kiểm tra lại mạng.";
-    }, 6000);
-
-    // Ghi đè callback để clear timeout khi có dữ liệu
-    const originalCallback = window.onLoginResp;
-    window.onLoginResp = function(data) {
-      clearTimeout(loginTimeout);
-      originalCallback(data);
-    };
+      errEl.innerText = "❌ Lỗi kết nối máy chủ! Vui lòng kiểm tra lại đường truyền.";
+    }, 10000);
 
     callAPI({ action: "login", username: u, password: p }, "onLoginResp");
   }
 
   function callAPI(params, callbackName) {
+    // Xóa thẻ script cũ nếu có
     const oldScript = document.getElementById('jsonp_script');
     if (oldScript) oldScript.remove();
 
@@ -175,6 +175,12 @@
     const script = document.createElement('script');
     script.id = 'jsonp_script';
     script.src = url;
+    script.onerror = function() {
+      if (loginTimer) clearTimeout(loginTimer);
+      document.getElementById("loginBtn").disabled = false;
+      document.getElementById("loginError").style.color = "#f44336";
+      document.getElementById("loginError").innerText = "❌ Không thể gọi API Apps Script! Vui lòng kiểm tra bản Deploy.";
+    };
     document.body.appendChild(script);
   }
 
