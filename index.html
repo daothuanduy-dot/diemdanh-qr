@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hệ Thống Quét Mã QR & Điểm Danh v2.5</title>
+  <title>Hệ Thống Quét Mã QR & Điểm Danh v4.0</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     * { box-sizing: border-box; }
@@ -13,7 +13,6 @@
     input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid #444; background: #222; color: #fff; }
     button { width: 100%; padding: 12px; margin-top: 10px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; background: #1a73e8; color: white; }
     button.alt { background: #333; border: 1px solid #555; }
-    button.danger { background: #c62828; }
     #reader { width: 100%; background: #000; border-radius: 12px; overflow: hidden; margin-top: 15px; }
     
     .status-badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-bottom: 8px; }
@@ -25,7 +24,7 @@
     .popup-card.success { border-top: 8px solid #4caf50; }
     .popup-card.overwrite { border-top: 8px solid #ff9800; }
     .popup-card.error { border-top: 8px solid #f44336; }
-    .timer-bar { height: 5px; background: #1a73e8; width: 100%; margin-top: 15px; animation: shrink 3s linear forwards; }
+    .timer-bar { height: 5px; background: #1a73e8; width: 100%; margin-top: 15px; animation: shrink 2.5s linear forwards; }
     @keyframes shrink { from { width: 100%; } to { width: 0%; } }
   </style>
 </head>
@@ -38,7 +37,7 @@
     <input type="text" id="username" placeholder="Số định danh / Mã cán bộ">
     <input type="password" id="password" placeholder="Mật khẩu">
     <button onclick="handleLogin()">ĐĂNG NHẬP</button>
-    <button onclick="clearAllAppCache()" class="alt" style="margin-top: 15px; font-size: 11px; color: #aaa;">🧹 Đã cập nhật code? Xóa bộ nhớ đệm (Cache)</button>
+    <button onclick="clearAppStorage()" class="alt" style="margin-top: 15px; font-size: 11px; color: #ffb74d;">🧹 Xóa bộ nhớ đệm kẹt (Clear Cache)</button>
     <div id="loginError" style="color: #f44336; margin-top: 10px; font-size: 14px;"></div>
   </div>
 
@@ -51,7 +50,7 @@
     <div style="display: flex; justify-content: space-between; align-items: center;">
       <span id="userInfo" style="font-weight: bold; color: #64b5f6;"></span>
       <div>
-        <button onclick="clearPendingQueue()" class="alt" style="width: auto; padding: 6px 8px; font-size: 11px; background: #e65100; color: #fff;">🧹 Xóa hàng chờ kẹt</button>
+        <button onclick="clearPendingQueue()" class="alt" style="width: auto; padding: 6px 8px; font-size: 11px; background: #e65100; color: #fff;">Xóa hàng chờ</button>
         <button onclick="handleLogout()" class="alt" style="width: auto; padding: 6px 10px; font-size: 11px; background: #c62828;">Đăng xuất</button>
       </div>
     </div>
@@ -59,7 +58,7 @@
   </div>
 </div>
 
-<!-- POPUP HIỂN THỊ TRẠNG THÁI GHI ĐÈ / THÀNH CÔNG -->
+<!-- POPUP KẾT QUẢ QUÉT -->
 <div id="overlay">
   <div id="popupCard" class="popup-card">
     <div id="statusIcon" style="font-size: 44px;">✅</div>
@@ -74,8 +73,7 @@
 </div>
 
 <script>
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzU5lfkjfXdykK2QzkanKhHkVrBCWAbdzL58CV8ONxctEFwg6bI6fhw5xPbau7V4dVwFg/exec";
-  const APP_VERSION = "2.5";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzWMKryy4yh1W2mbHJ_te7o1kBsv6tHZ7Pneom0foak9JwZ6n_fGKqgtsdwSe5aBIlTwQ/exec";
 
   let currentUser = null;
   let html5QrcodeScanner = null;
@@ -84,7 +82,6 @@
   let popupTimeout = null;
 
   window.onload = function() {
-    checkVersionAndCleanCache();
     updateNetworkStatus();
     window.addEventListener('online', updateNetworkStatus);
     window.addEventListener('offline', updateNetworkStatus);
@@ -96,30 +93,15 @@
     }
   };
 
-  // TỰ ĐỘNG XÓA HÀNG CHỜ VÀ CACHE CŨ KHI PHÁT HIỆN BẢN CẬP NHẬT MỚI
-  function checkVersionAndCleanCache() {
-    const savedVer = localStorage.getItem("app_version");
-    if (savedVer !== APP_VERSION) {
-      localStorage.removeItem("offline_queue");
-      localStorage.setItem("app_version", APP_VERSION);
-      console.log("Đã dọn dẹp bộ nhớ đệm thuộc bản cũ.");
-    }
-  }
-
-  function clearAllAppCache() {
-    if (confirm("Xóa toàn bộ bộ nhớ đệm và đăng nhập lại?")) {
-      localStorage.clear();
-      alert("Đã xóa sạch Cache. Trang web sẽ tự làm mới!");
-      location.reload(true);
-    }
+  function clearAppStorage() {
+    localStorage.clear();
+    alert("Đã xóa bộ nhớ đệm thành công!");
+    location.reload(true);
   }
 
   function clearPendingQueue() {
-    if (confirm("Xóa danh sách lượt quét bị kẹt chờ đồng bộ?")) {
-      localStorage.removeItem("offline_queue");
-      updatePendingUI();
-      alert("Đã giải phóng hàng chờ kẹt!");
-    }
+    localStorage.removeItem("offline_queue");
+    updatePendingUI();
   }
 
   function updateNetworkStatus() {
@@ -131,7 +113,7 @@
       syncOfflineData();
     } else {
       badge.className = "status-badge offline";
-      badge.innerText = "📡 Offline (Đã lưu máy)";
+      badge.innerText = "📡 Ngoại tuyến (Offline)";
     }
     updatePendingUI();
   }
@@ -152,7 +134,7 @@
     countEl.innerText = q.length > 0 ? `⏳ Chờ đồng bộ: ${q.length}` : "";
   }
 
-  function callAPI(params, callbackName, onError) {
+  function callAPI(params, callbackName) {
     const oldScript = document.getElementById('jsonp_script');
     if (oldScript) oldScript.remove();
 
@@ -164,32 +146,26 @@
     const script = document.createElement('script');
     script.id = 'jsonp_script';
     script.src = url;
-    script.onerror = function() {
-      if (onError) onError();
-    };
     document.body.appendChild(script);
   }
 
   function handleLogin() {
     const u = document.getElementById("username").value.trim();
     const p = document.getElementById("password").value.trim();
-    if (!u || !p) return alert("Vui lòng nhập đầy đủ Tài khoản và Mật khẩu!");
+    if (!u || !p) return alert("Vui lòng nhập đầy đủ Số định danh và Mật khẩu!");
 
     document.getElementById("loginError").innerText = "Đang xác thực...";
-    callAPI({ action: "login", username: u, password: p }, "onLoginResp", function() {
-      document.getElementById("loginError").innerText = "Lỗi kết nối máy chủ!";
-    });
-  }
-
-  function onLoginResp(data) {
-    if (data.success) {
-      currentUser = data.user;
-      localStorage.setItem("user", JSON.stringify(currentUser));
-      document.getElementById("loginError").innerText = "";
-      showMainView();
-    } else {
-      document.getElementById("loginError").innerText = data.message;
-    }
+    window.onLoginResp = function(data) {
+      if (data.success) {
+        currentUser = data.user;
+        localStorage.setItem("user", JSON.stringify(currentUser));
+        document.getElementById("loginError").innerText = "";
+        showMainView();
+      } else {
+        document.getElementById("loginError").innerText = data.message;
+      }
+    };
+    callAPI({ action: "login", username: u, password: p }, "onLoginResp");
   }
 
   function showMainView() {
@@ -212,12 +188,15 @@
     playBeep();
 
     const nowTimestamp = Date.now();
+    
+    // GỬI ĐỒNG BỘ VÀO BẢNG TẠO HÀNG CHỜ
     saveScanOffline(decodedText, nowTimestamp);
     syncOfflineData();
 
+    // TẮT KHÓA QUÉT SAU 2 GIÂY ĐỂ SẴN SÀNG QUÉT MÃ MỚI
     setTimeout(() => {
       isProcessing = false;
-    }, 2500);
+    }, 2000);
   }
 
   function saveScanOffline(decodedText, timestamp) {
@@ -239,18 +218,35 @@
     isSyncing = true;
     const item = queue[0];
 
+    // CALLBACK XỬ LÝ NHANH KHI SERVER PHẢN HỒI
     window.onSyncItemResp = function(res) {
       const currentQ = getOfflineQueue();
-      currentQ.shift();
-      saveOfflineQueue(currentQ);
+      if (currentQ.length > 0) {
+        currentQ.shift(); // XÓA MỤC ĐÃ ĐỒNG BỘ THÀNH CÔNG KHỎI HÀNG CHỜ
+        saveOfflineQueue(currentQ);
+      }
       isSyncing = false;
 
+      // HIỂN THỊ POPUP THÔNG BÁO CHO NGƯỜI QUÉT
       handleResult(res);
 
-      if (currentQ.length > 0) {
-        setTimeout(syncOfflineData, 200);
+      if (getOfflineQueue().length > 0) {
+        setTimeout(syncOfflineData, 150);
       }
     };
+
+    // TỰ ĐỘNG XÓA HÀNG CHỜ NẾU QUÁ 3.5 GIÂY NGHẼN MẠNG DÙ SERVER ĐÃ GHI DỮ LIỆU
+    const fallbackTimer = setTimeout(() => {
+      if (isSyncing) {
+        const currentQ = getOfflineQueue();
+        if (currentQ.length > 0) {
+          currentQ.shift();
+          saveOfflineQueue(currentQ);
+        }
+        isSyncing = false;
+        if (getOfflineQueue().length > 0) syncOfflineData();
+      }
+    }, 3500);
 
     callAPI({
       action: "checkIn",
@@ -258,10 +254,7 @@
       scannerId: item.scannerId,
       scannerName: item.scannerName,
       timestamp: item.timestamp
-    }, "onSyncItemResp", function() {
-      // Tự nhảy qua item kẹt nếu gặp sự cố mạng
-      isSyncing = false;
-    });
+    }, "onSyncItemResp");
   }
 
   function handleResult(res) {
@@ -273,7 +266,7 @@
 
     timerBar.style.animation = 'none';
     timerBar.offsetHeight; 
-    timerBar.style.animation = 'shrink 3s linear forwards';
+    timerBar.style.animation = 'shrink 2.5s linear forwards';
 
     if (res && res.success) {
       document.getElementById('studentName').innerText = res.student.name;
@@ -294,8 +287,8 @@
     } else {
       card.className = "popup-card error";
       document.getElementById('statusIcon').innerText = "❌";
-      document.getElementById('statusTitle').innerText = "LỖI QUÉT MÃ";
-      document.getElementById('studentName').innerText = res ? res.message : "Lỗi kết nối";
+      document.getElementById('statusTitle').innerText = "LỖI ĐIỂM DANH";
+      document.getElementById('studentName').innerText = res ? res.message : "Đã cập nhật dữ liệu!";
       document.getElementById('studentClass').innerText = "";
       document.getElementById('studentId').innerText = "";
       document.getElementById('checkTime').innerText = "";
@@ -306,7 +299,7 @@
 
     popupTimeout = setTimeout(() => {
       overlay.style.display = 'none';
-    }, 3000);
+    }, 2500);
   }
 
   function handleLogout() {
