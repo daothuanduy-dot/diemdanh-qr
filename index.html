@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hệ Thống Quét Mã QR & Điểm Danh v4.5</title>
+  <title>Hệ Thống Quét Mã QR & Điểm Danh v5.0</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     * { box-sizing: border-box; }
@@ -15,20 +15,29 @@
     button.alt { background: #333; border: 1px solid #555; }
     #reader { width: 100%; background: #000; border-radius: 12px; overflow: hidden; margin-top: 15px; }
     
-    .status-badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-bottom: 8px; }
+    .status-badge { display: inline-block; padding: 6px 12px; border-radius: 16px; font-size: 12px; font-weight: bold; }
     .online { background: #2e7d32; color: #fff; }
     .offline { background: #c62828; color: #fff; }
+    .clickable-pending { background: #e65100; color: #fff; cursor: pointer; animation: pulse 2s infinite; }
 
-    /* MÀN HÌNH POPUP HIỂN THỊ THÔNG TIN NGƯỜI ĐƯỢC QUÉT */
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.7; }
+      100% { opacity: 1; }
+    }
+
+    /* OVERLAY POPUP THÔNG BÁO QUÉT 4S */
     #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; justify-content: center; align-items: center; }
     .popup-card { background: #fff; color: #333; padding: 25px; border-radius: 16px; width: 85%; max-width: 380px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
     .popup-card.success { border-top: 8px solid #4caf50; }
-    .popup-card.overwrite { border-top: 8px solid #ff9800; }
-    .popup-card.error { border-top: 8px solid #f44336; }
-    
-    /* THANH THỜI GIAN ĐẾM NGHƯỢC 4 GIÂY */
     .timer-bar { height: 6px; background: #1a73e8; width: 100%; margin-top: 15px; border-radius: 3px; animation: shrink 4s linear forwards; }
     @keyframes shrink { from { width: 100%; } to { width: 0%; } }
+
+    /* MODAL DANH SÁCH CHỜ ĐỒNG BỘ */
+    #queueModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9998; justify-content: center; align-items: center; }
+    .modal-card { background: #1e1e1e; color: #fff; padding: 20px; border-radius: 16px; width: 90%; max-width: 420px; max-height: 80vh; display: flex; flex-direction: column; text-align: left; }
+    .modal-body { overflow-y: auto; margin: 15px 0; flex: 1; }
+    .queue-item { background: #2a2a2a; padding: 10px 12px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid #ff9800; font-size: 13px; }
   </style>
 </head>
 <body>
@@ -40,7 +49,6 @@
     <input type="text" id="username" placeholder="Số định danh / Mã cán bộ">
     <input type="password" id="password" placeholder="Mật khẩu">
     <button onclick="handleLogin()">ĐĂNG NHẬP</button>
-    <button onclick="clearAppStorage()" class="alt" style="margin-top: 15px; font-size: 11px; color: #ffb74d;">🧹 Xóa bộ nhớ đệm kẹt (Clear Cache)</button>
     <div id="loginError" style="color: #f44336; margin-top: 10px; font-size: 14px;"></div>
   </div>
 
@@ -48,36 +56,46 @@
   <div id="mainView" style="display: none;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
       <span id="networkStatus" class="status-badge online">🌐 Trực tuyến</span>
-      <span id="pendingCount" style="font-size: 12px; color: #ffca28;"></span>
+      <span id="pendingBtn" class="status-badge clickable-pending" style="display: none;" onclick="openQueueModal()">⏳ Chờ đồng bộ: <b id="pendingCount">0</b></span>
     </div>
     <div style="display: flex; justify-content: space-between; align-items: center;">
       <span id="userInfo" style="font-weight: bold; color: #64b5f6;"></span>
-      <div>
-        <button onclick="clearPendingQueue()" class="alt" style="width: auto; padding: 6px 8px; font-size: 11px; background: #e65100; color: #fff;">Xóa hàng chờ</button>
-        <button onclick="handleLogout()" class="alt" style="width: auto; padding: 6px 10px; font-size: 11px; background: #c62828;">Đăng xuất</button>
-      </div>
+      <button onclick="handleLogout()" class="alt" style="width: auto; padding: 6px 12px; font-size: 12px; background: #c62828;">Đăng xuất</button>
     </div>
     <div id="reader"></div>
   </div>
 </div>
 
-<!-- POPUP THÔNG BÁO HIỂN THỊ TRONG 4 GIÂY -->
+<!-- POPUP THÔNG BÁO QUÉT THÀNH CÔNG (HIỂN THỊ 4 GIÂY) -->
 <div id="overlay">
-  <div id="popupCard" class="popup-card">
-    <div id="statusIcon" style="font-size: 48px;">✅</div>
-    <div id="statusTitle" style="font-weight: bold; font-size: 13px; color: #666; text-transform: uppercase;"></div>
+  <div id="popupCard" class="popup-card success">
+    <div style="font-size: 48px;">✅</div>
+    <div style="font-weight: bold; font-size: 13px; color: #388e3c; text-transform: uppercase;">QUÉT MÃ THÀNH CÔNG</div>
     <div id="studentName" style="font-size: 22px; font-weight: bold; color: #1a73e8; margin: 8px 0;"></div>
-    <div id="studentClass" style="font-weight: bold; color: #d93025; font-size: 16px;"></div>
-    <div id="studentId" style="color: #555; font-size: 14px; margin-top: 2px;"></div>
+    <div id="studentId" style="color: #555; font-size: 15px; font-weight: bold;"></div>
     <div id="checkTime" style="font-size: 13px; color: #777; margin-top: 8px;"></div>
-    <div id="scannerInfo" style="font-size: 12px; color: #388e3c; margin-top: 4px;"></div>
+    <div id="scannerInfo" style="font-size: 12px; color: #1976d2; margin-top: 4px;"></div>
     <div id="timerBar" class="timer-bar"></div>
   </div>
 </div>
 
+<!-- MODAL XEM DANH SÁCH HỌC SINH CHỜ ĐỒNG BỘ -->
+<div id="queueModal">
+  <div class="modal-card">
+    <h3 style="margin: 0; color: #ffca28;">📋 Danh Sách Chờ Đồng Bộ</h3>
+    <p style="font-size: 12px; color: #aaa; margin: 5px 0 10px 0;">Dữ liệu đã lưu an toàn trên máy. Nhấn thử gửi lại nếu mạng chập chờn.</p>
+    
+    <div id="queueList" class="modal-body"></div>
+
+    <div style="display: flex; gap: 10px;">
+      <button onclick="forceSyncQueue()" style="background: #2e7d32; flex: 1;">🔄 Thử gửi lại ngay</button>
+      <button onclick="closeQueueModal()" class="alt" style="flex: 1;">Đóng</button>
+    </div>
+  </div>
+</div>
+
 <script>
-  // 🔴 THAY BẰNG URL WEB APP CỦA BẠN NẾU CÓ THAY ĐỔI
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzWMKryy4yh1W2mbHJ_te7o1kBsv6tHZ7Pneom0foak9JwZ6n_fGKqgtsdwSe5aBIlTwQ/exec";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzqXbtlWx3NnFRtrg3X-_yH23K8WZFzrcVHxBBy8ld53XlUHjHHoajR_lzT8UAjFS_euA/exec";
 
   let currentUser = null;
   let html5QrcodeScanner = null;
@@ -96,17 +114,6 @@
       showMainView();
     }
   };
-
-  function clearAppStorage() {
-    localStorage.clear();
-    alert("Đã xóa bộ nhớ đệm thành công!");
-    location.reload(true);
-  }
-
-  function clearPendingQueue() {
-    localStorage.removeItem("offline_queue");
-    updatePendingUI();
-  }
 
   function updateNetworkStatus() {
     const badge = document.getElementById('networkStatus');
@@ -132,10 +139,16 @@
   }
 
   function updatePendingUI() {
+    const btn = document.getElementById("pendingBtn");
     const countEl = document.getElementById("pendingCount");
-    if (!countEl) return;
     const q = getOfflineQueue();
-    countEl.innerText = q.length > 0 ? `⏳ Chờ đồng bộ: ${q.length}` : "";
+
+    if (q.length > 0) {
+      countEl.innerText = q.length;
+      btn.style.display = "inline-block";
+    } else {
+      btn.style.display = "none";
+    }
   }
 
   function callAPI(params, callbackName) {
@@ -156,7 +169,7 @@
   function handleLogin() {
     const u = document.getElementById("username").value.trim();
     const p = document.getElementById("password").value.trim();
-    if (!u || !p) return alert("Vui lòng nhập đầy đủ Số định danh và Mật khẩu!");
+    if (!u || !p) return alert("Vui lòng nhập đầy đủ Tài khoản và Mật khẩu!");
 
     document.getElementById("loginError").innerText = "Đang xác thực...";
     window.onLoginResp = function(data) {
@@ -186,18 +199,61 @@
     syncOfflineData();
   }
 
+  // BÓC TÁCH MÃ HỌC SINH TỪ CHUỖI QR
+  function parseStudentCode(qrContent) {
+    let code = qrContent ? qrContent.toString().trim() : "";
+    if (code.indexOf("Mã HS:") !== -1) {
+      let match = code.match(/Mã HS:\s*(\d+)/i);
+      if (match && match[1]) return match[1].trim();
+    }
+    if (code.indexOf("|") !== -1) {
+      return code.split("|")[0].replace("Mã HS:", "").trim();
+    }
+    return code;
+  }
+
   function onScanSuccess(decodedText) {
     if (isProcessing) return;
     isProcessing = true;
     playBeep();
 
     const nowTimestamp = Date.now();
+    const studentCode = parseStudentCode(decodedText);
+    const dateFormatted = new Date(nowTimestamp).toLocaleTimeString('vi-VN');
+
+    // 1. BẬT NGAY POPUP THÔNG BÁO CHO NGƯỜI QUÉT (0.1 GIÂY)
+    showSuccessPopup(studentCode, dateFormatted);
+
+    // 2. LƯU VÀO HÀNG CHỜ VÀ ĐẨY LÊN GOOGLE SHEET NGẦM
     saveScanOffline(decodedText, nowTimestamp);
     syncOfflineData();
 
-    // Tắt khóa quét mã tiếp theo sau khi Popup đóng (4 giây)
+    // 3. MỞ KHÓA MÁY QUÉT ĐỂ SẴN SÀNG QUÉT HỌC SINH TIẾP THEO SAU 2.5 GIÂY
     setTimeout(() => {
       isProcessing = false;
+    }, 2500);
+  }
+
+  function showSuccessPopup(studentCode, timeStr) {
+    const overlay = document.getElementById('overlay');
+    const timerBar = document.getElementById('timerBar');
+
+    document.getElementById('studentName').innerText = "Học sinh ID: " + studentCode;
+    document.getElementById('studentId').innerText = "Đã nhận diện mã QR thành công";
+    document.getElementById('checkTime').innerText = "Thời gian quét: " + timeStr;
+    document.getElementById('scannerInfo').innerText = "Người thực hiện: " + currentUser.name;
+
+    if (popupTimeout) clearTimeout(popupTimeout);
+
+    timerBar.style.animation = 'none';
+    timerBar.offsetHeight; 
+    timerBar.style.animation = 'shrink 4s linear forwards';
+
+    overlay.style.display = 'flex';
+
+    // ĐÓNG POPUP SAU ĐÚNG 4 GIÂY
+    popupTimeout = setTimeout(() => {
+      overlay.style.display = 'none';
     }, 4000);
   }
 
@@ -223,14 +279,12 @@
     window.onSyncItemResp = function(res) {
       const currentQ = getOfflineQueue();
       if (currentQ.length > 0) {
-        currentQ.shift(); // Xóa mục đã đồng bộ thành công khỏi hàng chờ
+        currentQ.shift(); // XÓA BẢN GHI ĐÃ ĐỒNG BỘ THÀNH CÔNG
         saveOfflineQueue(currentQ);
       }
       isSyncing = false;
 
-      // HIỂN THỊ POPUP THÔNG BÁO CHO NGƯỜI QUÉT TRONG 4S
-      handleResult(res);
-
+      // TIẾP TỤC ĐỒNG BỘ MỤC TIẾP THEO NẾU CÒN TRONG HÀNG CHỜ
       if (getOfflineQueue().length > 0) {
         setTimeout(syncOfflineData, 200);
       }
@@ -243,55 +297,47 @@
       scannerName: item.scannerName,
       timestamp: item.timestamp
     }, "onSyncItemResp");
+
+    // TỰ GIẢI PHÓNG BIẾN KẸT NẾU MẠNG CHẬP CHỜN QUÁ 5 GIÂY
+    setTimeout(() => {
+      if (isSyncing) {
+        isSyncing = false;
+      }
+    }, 5000);
   }
 
-  // HÀM BẬT POPUP THÔNG BÁO HIỂN THỊ TRONG DÚNG 4 GIÂY
-  function handleResult(res) {
-    const overlay = document.getElementById('overlay');
-    const card = document.getElementById('popupCard');
-    const timerBar = document.getElementById('timerBar');
+  // --- QUẢN LÝ MODAL XEM DANH SÁCH CÁC MỤC CHỜ ĐỒNG BỘ ---
+  function openQueueModal() {
+    const q = getOfflineQueue();
+    const listEl = document.getElementById("queueList");
+    listEl.innerHTML = "";
 
-    if (popupTimeout) clearTimeout(popupTimeout);
-
-    // Reset lại hiệu ứng thanh thời gian 4s
-    timerBar.style.animation = 'none';
-    timerBar.offsetHeight; 
-    timerBar.style.animation = 'shrink 4s linear forwards';
-
-    if (res && res.success) {
-      document.getElementById('studentName').innerText = res.student.name;
-      document.getElementById('studentClass').innerText = "Lớp: " + res.student.className;
-      document.getElementById('studentId').innerText = "Mã số: " + res.student.id;
-      document.getElementById('scannerInfo').innerText = "Người quét: " + res.scanner;
-
-      if (res.overwritten) {
-        card.className = "popup-card overwrite";
-        document.getElementById('statusIcon').innerText = "🔄";
-        document.getElementById('statusTitle').innerText = "ĐÃ CẬP NHẬT TỪ VẮNG SANG ĐI HỌC MUỘN";
-      } else {
-        card.className = "popup-card success";
-        document.getElementById('statusIcon').innerText = "✅";
-        document.getElementById('statusTitle').innerText = "ĐIỂM DANH THÀNH CÔNG";
-      }
-      document.getElementById('checkTime').innerText = "Thời gian: " + res.time;
+    if (q.length === 0) {
+      listEl.innerHTML = "<div style='text-align:center; color:#888;'>Hàng chờ trống! Tất cả dữ liệu đã được gửi.</div>";
     } else {
-      card.className = "popup-card error";
-      document.getElementById('statusIcon').innerText = "❌";
-      document.getElementById('statusTitle').innerText = "LỖI ĐIỂM DANH";
-      document.getElementById('studentName').innerText = res ? res.message : "Đã cập nhật dữ liệu!";
-      document.getElementById('studentClass').innerText = "";
-      document.getElementById('studentId').innerText = "";
-      document.getElementById('checkTime').innerText = "";
-      document.getElementById('scannerInfo').innerText = "";
+      q.forEach((item, idx) => {
+        const code = parseStudentCode(item.qrContent);
+        const timeStr = new Date(item.timestamp).toLocaleString('vi-VN');
+        listEl.innerHTML += `
+          <div class="queue-item">
+            <div><b>Mã HS:</b> <span style="color:#64b5f6;">${code}</span></div>
+            <div style="font-size:11px; color:#aaa; margin-top:2px;">⏱ Thời gian: ${timeStr}</div>
+          </div>
+        `;
+      });
     }
 
-    // Hiển thị Popup
-    overlay.style.display = 'flex';
+    document.getElementById("queueModal").style.display = "flex";
+  }
 
-    // Tự động đóng Popup sau đúng 4000ms (4 giây)
-    popupTimeout = setTimeout(() => {
-      overlay.style.display = 'none';
-    }, 4000);
+  function closeQueueModal() {
+    document.getElementById("queueModal").style.display = "none";
+  }
+
+  function forceSyncQueue() {
+    isSyncing = false;
+    syncOfflineData();
+    setTimeout(openQueueModal, 800);
   }
 
   function handleLogout() {
