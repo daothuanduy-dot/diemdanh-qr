@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hệ Thống Quét Mã QR & Điểm Danh</title>
+  <title>Hệ Thống Quét Mã QR & Điểm Danh v2.5</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     * { box-sizing: border-box; }
@@ -13,6 +13,7 @@
     input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid #444; background: #222; color: #fff; }
     button { width: 100%; padding: 12px; margin-top: 10px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; background: #1a73e8; color: white; }
     button.alt { background: #333; border: 1px solid #555; }
+    button.danger { background: #c62828; }
     #reader { width: 100%; background: #000; border-radius: 12px; overflow: hidden; margin-top: 15px; }
     
     .status-badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-bottom: 8px; }
@@ -37,6 +38,7 @@
     <input type="text" id="username" placeholder="Số định danh / Mã cán bộ">
     <input type="password" id="password" placeholder="Mật khẩu">
     <button onclick="handleLogin()">ĐĂNG NHẬP</button>
+    <button onclick="clearAllAppCache()" class="alt" style="margin-top: 15px; font-size: 11px; color: #aaa;">🧹 Đã cập nhật code? Xóa bộ nhớ đệm (Cache)</button>
     <div id="loginError" style="color: #f44336; margin-top: 10px; font-size: 14px;"></div>
   </div>
 
@@ -49,7 +51,8 @@
     <div style="display: flex; justify-content: space-between; align-items: center;">
       <span id="userInfo" style="font-weight: bold; color: #64b5f6;"></span>
       <div>
-        <button onclick="handleLogout()" class="alt" style="width: auto; padding: 6px 10px; font-size: 12px; background: #c62828;">Đăng xuất</button>
+        <button onclick="clearPendingQueue()" class="alt" style="width: auto; padding: 6px 8px; font-size: 11px; background: #e65100; color: #fff;">🧹 Xóa hàng chờ kẹt</button>
+        <button onclick="handleLogout()" class="alt" style="width: auto; padding: 6px 10px; font-size: 11px; background: #c62828;">Đăng xuất</button>
       </div>
     </div>
     <div id="reader"></div>
@@ -71,8 +74,8 @@
 </div>
 
 <script>
-  // 🔴 THAY BẰNG URL WEB APP CỦA BẠN NẾU CÓ THAY ĐỔI
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxN4k6Pmoys2S1s8wsQx-_IOSiD_Qteo4S-dbT33T2pYT4vyP-6OshbjGetUqXEAsEMdQ/exec";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzU5lfkjfXdykK2QzkanKhHkVrBCWAbdzL58CV8ONxctEFwg6bI6fhw5xPbau7V4dVwFg/exec";
+  const APP_VERSION = "2.5";
 
   let currentUser = null;
   let html5QrcodeScanner = null;
@@ -81,6 +84,7 @@
   let popupTimeout = null;
 
   window.onload = function() {
+    checkVersionAndCleanCache();
     updateNetworkStatus();
     window.addEventListener('online', updateNetworkStatus);
     window.addEventListener('offline', updateNetworkStatus);
@@ -91,6 +95,32 @@
       showMainView();
     }
   };
+
+  // TỰ ĐỘNG XÓA HÀNG CHỜ VÀ CACHE CŨ KHI PHÁT HIỆN BẢN CẬP NHẬT MỚI
+  function checkVersionAndCleanCache() {
+    const savedVer = localStorage.getItem("app_version");
+    if (savedVer !== APP_VERSION) {
+      localStorage.removeItem("offline_queue");
+      localStorage.setItem("app_version", APP_VERSION);
+      console.log("Đã dọn dẹp bộ nhớ đệm thuộc bản cũ.");
+    }
+  }
+
+  function clearAllAppCache() {
+    if (confirm("Xóa toàn bộ bộ nhớ đệm và đăng nhập lại?")) {
+      localStorage.clear();
+      alert("Đã xóa sạch Cache. Trang web sẽ tự làm mới!");
+      location.reload(true);
+    }
+  }
+
+  function clearPendingQueue() {
+    if (confirm("Xóa danh sách lượt quét bị kẹt chờ đồng bộ?")) {
+      localStorage.removeItem("offline_queue");
+      updatePendingUI();
+      alert("Đã giải phóng hàng chờ kẹt!");
+    }
+  }
 
   function updateNetworkStatus() {
     const badge = document.getElementById('networkStatus');
@@ -126,7 +156,7 @@
     const oldScript = document.getElementById('jsonp_script');
     if (oldScript) oldScript.remove();
 
-    let url = SCRIPT_URL + "?callback=" + callbackName;
+    let url = SCRIPT_URL + "?callback=" + callbackName + "&_nc=" + Date.now();
     for (let key in params) {
       url += "&" + key + "=" + encodeURIComponent(params[key]);
     }
@@ -229,6 +259,7 @@
       scannerName: item.scannerName,
       timestamp: item.timestamp
     }, "onSyncItemResp", function() {
+      // Tự nhảy qua item kẹt nếu gặp sự cố mạng
       isSyncing = false;
     });
   }
@@ -250,7 +281,6 @@
       document.getElementById('studentId').innerText = "Mã số: " + res.student.id;
       document.getElementById('scannerInfo').innerText = "Người quét: " + res.scanner;
 
-      // HIỂN THỊ THÔNG BÁO TƯƠNG ỨNG KHI GHI ĐÈ
       if (res.overwritten) {
         card.className = "popup-card overwrite";
         document.getElementById('statusIcon').innerText = "🔄";
