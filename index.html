@@ -2,386 +2,479 @@
 <html lang="vi">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hệ Thống Quét Mã QR & Điểm Danh v5.3</title>
-  <script src="https://unpkg.com/html5-qrcode"></script>
-  <style>
-    * { box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #fff; margin: 0; padding: 15px; }
-    .container { max-width: 480px; margin: 0 auto; text-align: center; }
-    .card { background: #1e1e1e; padding: 25px; border-radius: 12px; border: 1px solid #333; margin-top: 15px; }
-    input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid #444; background: #222; color: #fff; }
-    button { width: 100%; padding: 12px; margin-top: 10px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; background: #1a73e8; color: white; }
-    button.alt { background: #333; border: 1px solid #555; }
-    #reader { width: 100%; background: #000; border-radius: 12px; overflow: hidden; margin-top: 15px; }
-    
-    .status-badge { display: inline-block; padding: 6px 12px; border-radius: 16px; font-size: 12px; font-weight: bold; }
-    .online { background: #2e7d32; color: #fff; }
-    .offline { background: #c62828; color: #fff; }
-    .clickable-pending { background: #e65100; color: #fff; cursor: pointer; animation: pulse 2s infinite; }
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quét Mã QR Thẻ Học Sinh - Quản Lý Nền Nếp</title>
 
-    @keyframes pulse {
-      0% { opacity: 1; }
-      50% { opacity: 0.7; }
-      100% { opacity: 1; }
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- HTML5 QR Code Scanner Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+
+  <style>
+    body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .card-custom { border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); border: none; }
+    #loginScreen { max-width: 420px; margin: 50px auto; }
+    
+    /* Style Scanner QR */
+    #qr-reader {
+      width: 100%;
+      max-width: 500px;
+      margin: 0 auto;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 3px solid #0d6efd;
+    }
+    #qr-reader video { object-fit: cover !important; border-radius: 8px; }
+
+    /* Overlay Popup 4 Giây */
+    .popup-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.75);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .popup-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .popup-card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 24px;
+      width: 90%;
+      max-width: 440px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes popIn {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
     }
 
-    /* OVERLAY POPUP THÔNG BÁO QUÉT 4S */
-    #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; justify-content: center; align-items: center; }
-    .popup-card { background: #fff; color: #333; padding: 25px; border-radius: 16px; width: 85%; max-width: 380px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-    .popup-card.success { border-top: 8px solid #4caf50; }
-    .timer-bar { height: 6px; background: #1a73e8; width: 100%; margin-top: 15px; border-radius: 3px; animation: shrink 4s linear forwards; }
-    @keyframes shrink { from { width: 100%; } to { width: 0%; } }
-
-    /* MODAL DANH SÁCH CHỜ ĐỒNG BỘ */
-    #queueModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9998; justify-content: center; align-items: center; }
-    .modal-card { background: #1e1e1e; color: #fff; padding: 20px; border-radius: 16px; width: 90%; max-width: 420px; max-height: 80vh; display: flex; flex-direction: column; text-align: left; }
-    .modal-body { overflow-y: auto; margin: 15px 0; flex: 1; }
-    .queue-item { background: #2a2a2a; padding: 10px 12px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid #ff9800; font-size: 13px; }
+    .countdown-bar {
+      height: 4px;
+      background: #0d6efd;
+      width: 100%;
+      border-radius: 2px;
+      margin-top: 15px;
+      animation: shrinkBar 4s linear forwards;
+    }
+    @keyframes shrinkBar {
+      from { width: 100%; }
+      to { width: 0%; }
+    }
   </style>
 </head>
-<body>
+<body class="p-2 p-md-4">
 
-<div class="container">
-  <!-- MÀN HÌNH ĐĂNG NHẬP -->
-  <div id="loginView" class="card">
-    <h2 style="color: #4caf50;">ĐĂNG NHẬP HỆ THỐNG</h2>
-    <input type="text" id="username" placeholder="Số định danh / Mã cán bộ">
-    <input type="password" id="password" placeholder="Mật khẩu">
-    <button id="loginBtn" onclick="handleLogin()">ĐĂNG NHẬP</button>
-    <div id="loginError" style="color: #ff9800; margin-top: 12px; font-size: 14px; font-weight: bold;"></div>
-  </div>
+<div class="container" style="max-width: 900px;">
 
-  <!-- MÀN HÌNH QUÉT QR -->
-  <div id="mainView" style="display: none;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-      <span id="networkStatus" class="status-badge online">🌐 Trực tuyến</span>
-      <span id="pendingBtn" class="status-badge clickable-pending" style="display: none;" onclick="openQueueModal()">⏳ Chờ đồng bộ: <b id="pendingCount">0</b></span>
-    </div>
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-      <span id="userInfo" style="font-weight: bold; color: #64b5f6;"></span>
-      <button onclick="handleLogout()" class="alt" style="width: auto; padding: 6px 12px; font-size: 12px; background: #c62828;">Đăng xuất</button>
-    </div>
-    <div id="reader"></div>
-  </div>
-</div>
-
-<!-- POPUP THÔNG BÁO QUÉT THÀNH CÔNG -->
-<div id="overlay">
-  <div id="popupCard" class="popup-card success">
-    <div style="font-size: 48px;">✅</div>
-    <div style="font-weight: bold; font-size: 13px; color: #388e3c; text-transform: uppercase;">QUÉT MÃ THÀNH CÔNG</div>
-    <div id="studentName" style="font-size: 22px; font-weight: bold; color: #1a73e8; margin: 8px 0;"></div>
-    <div id="studentId" style="color: #555; font-size: 15px; font-weight: bold;"></div>
-    <div id="checkTime" style="font-size: 13px; color: #777; margin-top: 8px;"></div>
-    <div id="scannerInfo" style="font-size: 12px; color: #1976d2; margin-top: 4px;"></div>
-    <div id="timerBar" class="timer-bar"></div>
-  </div>
-</div>
-
-<!-- MODAL XEM DANH SÁCH CHỜ ĐỒNG BỘ -->
-<div id="queueModal">
-  <div class="modal-card">
-    <h3 style="margin: 0; color: #ffca28;">📋 Danh Sách Chờ Đồng Bộ</h3>
-    <p style="font-size: 12px; color: #aaa; margin: 5px 0 10px 0;">Dữ liệu đã lưu an toàn trên máy. Nhấn thử gửi lại nếu mạng chập chờn.</p>
+  <!-- ==================== 1. MÀN HÌNH ĐĂNG NHẬP ==================== -->
+  <div id="loginScreen" class="card card-custom p-4">
+    <h4 class="text-primary text-center fw-bold mb-3">ĐĂNG NHẬP HỆ THỐNG</h4>
+    <p class="text-center text-muted small mb-4">Trình Quét Mã QR Học Sinh Đi Học Muộn</p>
     
-    <div id="queueList" class="modal-body"></div>
+    <div class="mb-3">
+      <label class="fw-bold form-label">Mã Cán Bộ / Số Định Danh:</label>
+      <input type="text" id="loginUser" class="form-control" placeholder="Nhập tài khoản...">
+    </div>
 
-    <div style="display: flex; gap: 10px;">
-      <button onclick="forceSyncQueue()" style="background: #2e7d32; flex: 1;">🔄 Thử gửi lại ngay</button>
-      <button onclick="closeQueueModal()" class="alt" style="flex: 1;">Đóng</button>
+    <div class="mb-3">
+      <label class="fw-bold form-label">Mật Khẩu:</label>
+      <div class="input-group">
+        <input type="password" id="loginPass" class="form-control" placeholder="Mật khẩu (Mặc định: 123456)...">
+        <button class="btn btn-outline-secondary" type="button" onclick="togglePass('loginPass')">👁️</button>
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="chkRemember" checked>
+        <label class="form-check-label small fw-semibold" for="chkRemember">Ghi nhớ đăng nhập</label>
+      </div>
+      <a href="javascript:void(0)" onclick="openModal('forgotModal')" class="small text-decoration-none fw-bold">Quên mật khẩu?</a>
+    </div>
+
+    <button id="loginBtn" onclick="handleLogin()" class="btn btn-primary w-100 fw-bold py-2">ĐĂNG NHẬP QUÉT QR</button>
+    <div id="loginError" class="text-danger text-center fw-bold mt-3 small"></div>
+  </div>
+
+
+  <!-- ==================== 2. MÀN HÌNH CHÍNH (QUÉT MÃ QR) ==================== -->
+  <div id="mainScreen" style="display: none;">
+    <div class="card card-custom p-3 p-md-4 mb-3">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 border-bottom pb-3 mb-3">
+        <div>
+          <h5 class="text-primary fw-bold mb-1">📷 QUÉT MÃ QR THẺ HỌC SINH ĐI MUỘN</h5>
+          <div class="text-muted small">
+            Người quét: <b id="lblUserName" class="text-dark">--</b> | 
+            Vai trò: <span id="lblUserRole" class="badge bg-success">--</span>
+          </div>
+        </div>
+        <div class="d-flex gap-2">
+          <button onclick="openModal('changePassModal')" class="btn btn-outline-secondary btn-sm fw-semibold">Đổi Mật Khẩu</button>
+          <button onclick="handleLogout()" class="btn btn-outline-danger btn-sm fw-semibold">Đăng Xuất</button>
+        </div>
+      </div>
+
+      <!-- CAMERA SCANNER CONTAINER -->
+      <div class="text-center mb-3">
+        <div id="qr-reader"></div>
+        <div id="cameraStatus" class="mt-2 text-muted small fw-semibold">⏳ Đang khởi tạo camera...</div>
+      </div>
+
+      <div class="d-flex justify-content-center gap-2 mb-3">
+        <button id="btnStartCam" onclick="startScanner()" class="btn btn-success fw-bold btn-sm" disabled>Bật Camera</button>
+        <button id="btnStopCam" onclick="stopScanner()" class="btn btn-secondary fw-bold btn-sm" disabled>Tắt Camera</button>
+      </div>
+
+      <!-- BẢNG NHẬT KÝ QUÉT TRONG PHIÊN -->
+      <h6 class="fw-bold text-dark mt-3 mb-2">📋 Lịch Sử Quét Trong Phiên</h6>
+      <div class="table-responsive">
+        <table class="table table-bordered table-striped text-center align-middle small">
+          <thead class="table-primary">
+            <tr>
+              <th>Thời Gian</th>
+              <th>Mã HS</th>
+              <th>Họ và Tên</th>
+              <th>Lớp</th>
+              <th>Nội Dung</th>
+              <th>Trạng Thái</th>
+            </tr>
+          </thead>
+          <tbody id="scanLogBody">
+            <tr id="emptyLogRow"><td colspan="6" class="text-muted">Chưa có lượt quét nào trong phiên làm việc này</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ==================== POPUP KẾT QUẢ QUÉT 4 GIÂY ==================== -->
+<div id="qrResultPopup" class="popup-overlay">
+  <div class="popup-card">
+    <div id="popupIcon" class="fs-1 mb-2">✅</div>
+    <h5 id="popupStudentName" class="fw-bold text-primary mb-1">NGUYỄN VĂN A</h5>
+    <div id="popupStudentSub" class="text-muted small mb-2">Mã HS: 12345 | Lớp: 10C1</div>
+    
+    <div id="popupBadge" class="badge bg-danger fs-6 p-2 mb-2">Đi học muộn (Không phép) (-2đ)</div>
+    <div id="popupMessage" class="fw-bold text-success small mb-2"> Chuyển trạng thái từ VẮNG ➔ ĐI HỌC MUỘN</div>
+    <div id="popupTime" class="text-muted micro-text small">Thời gian: 02/10/2026 07:15:30</div>
+
+    <div class="countdown-bar" id="countdownBar"></div>
+  </div>
+</div>
+
+
+<!-- MODAL QUÊN MẬT KHẨU -->
+<div class="modal fade" id="forgotModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content card-custom">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold text-primary">KHÔI PHỤC MẬT KHẨU</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="forgotStep1">
+          <p class="small text-muted">Nhập Số định danh / Mã cán bộ để nhận mã OTP qua Email:</p>
+          <input type="text" id="forgotUsername" class="form-control mb-3" placeholder="Nhập số định danh...">
+          <button onclick="handleRequestOTP()" id="btnRequestOtp" class="btn btn-primary w-100 fw-bold">Gửi OTP qua Email</button>
+        </div>
+        <div id="forgotStep2" style="display: none;">
+          <p class="small text-success fw-bold">Mã OTP đã gửi về Email. Nhập mã OTP và mật khẩu mới:</p>
+          <input type="text" id="otpInput" class="form-control mb-2" placeholder="Mã OTP 6 chữ số">
+          <input type="password" id="newPassword" class="form-control mb-3" placeholder="Mật khẩu mới">
+          <button onclick="handleConfirmOTP()" id="btnConfirmOtp" class="btn btn-success w-100 fw-bold">Xác Nhận Đổi Mật Khẩu</button>
+        </div>
+        <div id="forgotMsg" class="text-center fw-bold mt-2 small"></div>
+      </div>
     </div>
   </div>
 </div>
+
+
+<!-- MODAL ĐỔI MẬT KHẨU -->
+<div class="modal fade" id="changePassModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content card-custom">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold text-primary">ĐỔI MẬT KHẨU CÁ NHÂN</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="password" id="oldPassInput" class="form-control mb-2" placeholder="Mật khẩu hiện tại...">
+        <input type="password" id="newPassInput" class="form-control mb-3" placeholder="Mật khẩu mới...">
+        <button onclick="handleChangePasswordSubmit()" class="btn btn-primary w-100 fw-bold">Cập Nhật Mật Khẩu</button>
+        <div id="changePassMsg" class="text-center fw-bold mt-2 small"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- JS Bootstrap 5 -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-  // URL Web App Google Apps Script
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxsI1i3bpIpam1j47ctMbVROk60OkuY0UGwRAL5SBPk8t-x1ICLOXnSeM5zsj5V6ieQ9w/exec";
+  // =========================================================================
+  // CẤU HÌNH LIÊN KẾT GOOGLE APPS SCRIPT WEB APP
+  // Dán URL Triển Khai (Web App Exec URL) của bạn vào biến bên dưới:
+  // =========================================================================
+  const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyhyqhBf-8742c3_mapijmDCU8pOH9NfnZcibDn5o56LkX2cNMSiqOQGrdN0XtUtip2/exec";
 
   let currentUser = null;
   let html5QrcodeScanner = null;
-  let isProcessing = false;
-  let isSyncing = false;
-  let popupTimeout = null;
-  let loginTimer = null;
+  let isScanningCooldown = false;
+  let popupTimer = null;
 
   window.onload = function() {
-    updateNetworkStatus();
-    window.addEventListener('online', updateNetworkStatus);
-    window.addEventListener('offline', updateNetworkStatus);
-
-    const savedUser = localStorage.getItem("user");
-    if (savedUser) {
-      currentUser = JSON.parse(savedUser);
-      showMainView();
+    const saved = localStorage.getItem("app_qr_user_session");
+    if (saved) {
+      currentUser = JSON.parse(saved);
+      showMainScreen();
     }
   };
 
-  // NGUYÊN TẮC CHUẨN ĐỊNH NGHĨA CALLBACK TOÀN CỤC KHÔNG ĐỔI
-  window.onLoginResp = function(data) {
-    if (loginTimer) clearTimeout(loginTimer);
-    
-    const btn = document.getElementById("loginBtn");
-    const errEl = document.getElementById("loginError");
-    btn.disabled = false;
-
-    if (data && data.success) {
-      currentUser = data.user;
-      localStorage.setItem("user", JSON.stringify(currentUser));
-      errEl.innerText = "";
-      showMainView();
-    } else {
-      errEl.style.color = "#f44336";
-      errEl.innerText = (data && data.message) ? data.message : "Tài khoản hoặc mật khẩu không chính xác!";
+  // GỬI REQUEST API TỚI GOOGLE APPS SCRIPT (CÓ HOÀN TÁC CORS PHÙ HỢP)
+  async function callApi(data) {
+    try {
+      const response = await fetch(APPS_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(data)
+      });
+      return await response.json();
+    } catch (err) {
+      console.error("Lỗi API Fetch:", err);
+      return { success: false, message: "Không thể kết nối đến máy chủ Google Script!" };
     }
-  };
+  }
 
-  function handleLogin() {
-    const u = document.getElementById("username").value.trim();
-    const p = document.getElementById("password").value.trim();
-    const btn = document.getElementById("loginBtn");
+  // 1. XỬ LÝ ĐĂNG NHẬP
+  async function handleLogin() {
+    const u = document.getElementById("loginUser").value.trim();
+    const p = document.getElementById("loginPass").value.trim();
     const errEl = document.getElementById("loginError");
+    const btn = document.getElementById("loginBtn");
 
-    if (!u || !p) {
-      alert("Vui lòng nhập đầy đủ Số định danh và Mật khẩu!");
-      return;
-    }
+    if (!u || !p) { errEl.innerText = "Vui lòng nhập tài khoản và mật khẩu!"; return; }
 
     btn.disabled = true;
-    errEl.style.color = "#ff9800";
-    errEl.innerText = "⏳ Đang xác thực dữ liệu...";
+    errEl.className = "text-warning text-center fw-bold mt-3 small";
+    errEl.innerText = "⏳ Đang xác thực tài khoản...";
 
-    // Đặt timeout 10 giây dự phòng
-    if (loginTimer) clearTimeout(loginTimer);
-    loginTimer = setTimeout(() => {
-      btn.disabled = false;
-      errEl.style.color = "#f44336";
-      errEl.innerText = "❌ Lỗi kết nối máy chủ! Vui lòng kiểm tra lại đường truyền.";
-    }, 10000);
+    const res = await callApi({ action: "login", username: u, password: p });
+    btn.disabled = false;
 
-    callAPI({ action: "login", username: u, password: p }, "onLoginResp");
-  }
-
-  function callAPI(params, callbackName) {
-    // Xóa thẻ script cũ nếu có
-    const oldScript = document.getElementById('jsonp_script');
-    if (oldScript) oldScript.remove();
-
-    let url = SCRIPT_URL + "?callback=" + callbackName + "&_nc=" + Date.now();
-    for (let key in params) {
-      url += "&" + key + "=" + encodeURIComponent(params[key]);
-    }
-
-    const script = document.createElement('script');
-    script.id = 'jsonp_script';
-    script.src = url;
-    script.onerror = function() {
-      if (loginTimer) clearTimeout(loginTimer);
-      document.getElementById("loginBtn").disabled = false;
-      document.getElementById("loginError").style.color = "#f44336";
-      document.getElementById("loginError").innerText = "❌ Không thể gọi API Apps Script! Vui lòng kiểm tra bản Deploy.";
-    };
-    document.body.appendChild(script);
-  }
-
-  function updateNetworkStatus() {
-    const badge = document.getElementById('networkStatus');
-    if (!badge) return;
-    if (navigator.onLine) {
-      badge.className = "status-badge online";
-      badge.innerText = "🌐 Trực tuyến";
-      syncOfflineData();
-    } else {
-      badge.className = "status-badge offline";
-      badge.innerText = "📡 Ngoại tuyến (Offline)";
-    }
-    updatePendingUI();
-  }
-
-  function getOfflineQueue() {
-    return JSON.parse(localStorage.getItem("offline_queue") || "[]");
-  }
-
-  function saveOfflineQueue(queue) {
-    localStorage.setItem("offline_queue", JSON.stringify(queue));
-    updatePendingUI();
-  }
-
-  function updatePendingUI() {
-    const btn = document.getElementById("pendingBtn");
-    const countEl = document.getElementById("pendingCount");
-    const q = getOfflineQueue();
-
-    if (q.length > 0) {
-      countEl.innerText = q.length;
-      btn.style.display = "inline-block";
-    } else {
-      btn.style.display = "none";
-    }
-  }
-
-  function showMainView() {
-    document.getElementById("loginView").style.display = "none";
-    document.getElementById("mainView").style.display = "block";
-    document.getElementById("userInfo").innerText = `${currentUser.name} (${currentUser.role})`;
-    updatePendingUI();
-
-    if (!html5QrcodeScanner) {
-      html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 15, qrbox: { width: 250, height: 250 } });
-      html5QrcodeScanner.render(onScanSuccess);
-    }
-
-    syncOfflineData();
-  }
-
-  function parseStudentCode(qrContent) {
-    let code = qrContent ? qrContent.toString().trim() : "";
-    if (code.indexOf("Mã HS:") !== -1) {
-      let match = code.match(/Mã HS:\s*(\d+)/i);
-      if (match && match[1]) return match[1].trim();
-    }
-    if (code.indexOf("|") !== -1) {
-      return code.split("|")[0].replace("Mã HS:", "").trim();
-    }
-    return code;
-  }
-
-  function onScanSuccess(decodedText) {
-    if (isProcessing) return;
-    isProcessing = true;
-    playBeep();
-
-    const nowTimestamp = Date.now();
-    const studentCode = parseStudentCode(decodedText);
-    const dateFormatted = new Date(nowTimestamp).toLocaleTimeString('vi-VN');
-
-    showSuccessPopup(studentCode, dateFormatted);
-    saveScanOffline(decodedText, nowTimestamp);
-    syncOfflineData();
-
-    setTimeout(() => {
-      isProcessing = false;
-    }, 2500);
-  }
-
-  function showSuccessPopup(studentCode, timeStr) {
-    const overlay = document.getElementById('overlay');
-    const timerBar = document.getElementById('timerBar');
-
-    document.getElementById('studentName').innerText = "Học sinh ID: " + studentCode;
-    document.getElementById('studentId').innerText = "Đã nhận diện mã QR thành công";
-    document.getElementById('checkTime').innerText = "Thời gian quét: " + timeStr;
-    document.getElementById('scannerInfo').innerText = "Người thực hiện: " + currentUser.name;
-
-    if (popupTimeout) clearTimeout(popupTimeout);
-
-    timerBar.style.animation = 'none';
-    timerBar.offsetHeight; 
-    timerBar.style.animation = 'shrink 4s linear forwards';
-
-    overlay.style.display = 'flex';
-
-    popupTimeout = setTimeout(() => {
-      overlay.style.display = 'none';
-    }, 4000);
-  }
-
-  function saveScanOffline(decodedText, timestamp) {
-    const queue = getOfflineQueue();
-    queue.push({
-      qrContent: decodedText,
-      scannerId: currentUser.id,
-      scannerName: currentUser.name,
-      timestamp: timestamp
-    });
-    saveOfflineQueue(queue);
-  }
-
-  function syncOfflineData() {
-    if (isSyncing || !navigator.onLine) return;
-    const queue = getOfflineQueue();
-    if (queue.length === 0) return;
-
-    isSyncing = true;
-    const item = queue[0];
-
-    window.onSyncItemResp = function(res) {
-      const currentQ = getOfflineQueue();
-      if (currentQ.length > 0) {
-        currentQ.shift();
-        saveOfflineQueue(currentQ);
+    if (res && res.success) {
+      currentUser = res.user;
+      if (document.getElementById("chkRemember").checked) {
+        localStorage.setItem("app_qr_user_session", JSON.stringify(currentUser));
       }
-      isSyncing = false;
-
-      if (getOfflineQueue().length > 0) {
-        setTimeout(syncOfflineData, 200);
-      }
-    };
-
-    callAPI({
-      action: "checkIn",
-      qrContent: item.qrContent,
-      scannerId: item.scannerId,
-      scannerName: item.scannerName,
-      timestamp: item.timestamp
-    }, "onSyncItemResp");
-
-    setTimeout(() => {
-      if (isSyncing) {
-        isSyncing = false;
-      }
-    }, 5000);
-  }
-
-  function openQueueModal() {
-    const q = getOfflineQueue();
-    const listEl = document.getElementById("queueList");
-    listEl.innerHTML = "";
-
-    if (q.length === 0) {
-      listEl.innerHTML = "<div style='text-align:center; color:#888;'>Hàng chờ trống! Tất cả dữ liệu đã được gửi.</div>";
+      errEl.innerText = "";
+      showMainScreen();
     } else {
-      q.forEach((item, idx) => {
-        const code = parseStudentCode(item.qrContent);
-        const timeStr = new Date(item.timestamp).toLocaleString('vi-VN');
-        listEl.innerHTML += `
-          <div class="queue-item">
-            <div><b>Mã HS:</b> <span style="color:#64b5f6;">${code}</span></div>
-            <div style="font-size:11px; color:#aaa; margin-top:2px;">⏱ Thời gian: ${timeStr}</div>
-          </div>
-        `;
-      });
+      errEl.className = "text-danger text-center fw-bold mt-3 small";
+      errEl.innerText = res.message || "Đăng nhập thất bại!";
     }
-
-    document.getElementById("queueModal").style.display = "flex";
   }
 
-  function closeQueueModal() {
-    document.getElementById("queueModal").style.display = "none";
-  }
+  function showMainScreen() {
+    document.getElementById("loginScreen").style.display = "none";
+    document.getElementById("mainScreen").style.display = "block";
+    document.getElementById("lblUserName").innerText = currentUser.name;
+    document.getElementById("lblUserRole").innerText = currentUser.role;
 
-  function forceSyncQueue() {
-    isSyncing = false;
-    syncOfflineData();
-    setTimeout(openQueueModal, 800);
+    startScanner();
   }
 
   function handleLogout() {
-    localStorage.removeItem("user");
+    stopScanner();
+    localStorage.removeItem("app_qr_user_session");
     currentUser = null;
     location.reload();
   }
 
-  function playBeep() {
+  // 2. KHỞI TẠO CAMERA QUÉT MÃ QR
+  function startScanner() {
+    if (html5QrcodeScanner) return;
+
+    document.getElementById("cameraStatus").innerText = "📷 Đang bật camera...";
+    html5QrcodeScanner = new Html5Qrcode("qr-reader");
+
+    html5QrcodeScanner.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: { width: 250, height: 250 } },
+      onScanSuccess,
+      onScanError
+    ).then(() => {
+      document.getElementById("cameraStatus").innerText = "🟢 Camera sẵn sàng. Hãy đưa mã QR trên thẻ học sinh vào khung hình!";
+      document.getElementById("btnStartCam").disabled = true;
+      document.getElementById("btnStopCam").disabled = false;
+    }).catch(err => {
+      document.getElementById("cameraStatus").innerText = "🔴 Không thể truy cập camera: " + err;
+      document.getElementById("btnStartCam").disabled = false;
+      document.getElementById("btnStopCam").disabled = true;
+    });
+  }
+
+  function stopScanner() {
+    if (html5QrcodeScanner) {
+      html5QrcodeScanner.stop().then(() => {
+        html5QrcodeScanner.clear();
+        html5QrcodeScanner = null;
+        document.getElementById("cameraStatus").innerText = "🔴 Camera đã tắt";
+        document.getElementById("btnStartCam").disabled = false;
+        document.getElementById("btnStopCam").disabled = true;
+      });
+    }
+  }
+
+  function onScanError(errorMessage) {
+    // Bỏ qua các lỗi đọc khung hình rác hàng giây
+  }
+
+  // 3. XỬ LÝ KHI QUÉT MÃ QR THÀNH CÔNG
+  async function onScanSuccess(decodedText, decodedResult) {
+    if (isScanningCooldown) return; // Tránh quét lặp lại khi popup đang hiển thị
+    isScanningCooldown = true;
+
+    // Phát âm thanh bip phản hồi (tùy chọn)
+    playBeepSound();
+
+    document.getElementById("cameraStatus").innerText = "⏳ Đang xử lý ghi nhận đi muộn...";
+
+    const res = await callApi({
+      action: "checkIn",
+      qrContent: decodedText,
+      scannerId: currentUser.id,
+      scannerName: currentUser.name,
+      timestamp: Date.now()
+    });
+
+    if (res && res.success) {
+      showSuccessPopup4s(res);
+      addScanLog(res);
+    } else {
+      alert("❌ Lỗi: " + (res ? res.message : "Không nhận diện được học sinh"));
+      isScanningCooldown = false;
+    }
+
+    document.getElementById("cameraStatus").innerText = "🟢 Camera sẵn sàng quét lượt tiếp theo...";
+  }
+
+  // 4. HIỂN THỊ POPUP THÔNG BÁO KẾT QUẢ TRONG 4 GIÂY
+  function showSuccessPopup4s(res) {
+    const popup = document.getElementById("qrResultPopup");
+    document.getElementById("popupStudentName").innerText = res.student.name;
+    document.getElementById("popupStudentSub").innerText = `Mã HS: ${res.student.id} | Lớp: ${res.student.className}`;
+    document.getElementById("popupBadge").innerText = `${res.detail} (${res.diem}đ)`;
+    document.getElementById("popupMessage").innerText = `📌 ${res.message}`;
+    document.getElementById("popupTime").innerText = `Thời gian: ${res.time}`;
+
+    // Reset thanh đếm ngược animation
+    const bar = document.getElementById("countdownBar");
+    bar.style.animation = 'none';
+    bar.offsetHeight; /* trigger reflow */
+    bar.style.animation = 'shrinkBar 4s linear forwards';
+
+    popup.classList.add("show");
+
+    if (popupTimer) clearTimeout(popupTimer);
+    popupTimer = setTimeout(() => {
+      popup.classList.remove("show");
+      isScanningCooldown = false; // Mở lại khả năng quét lượt mới sau 4 giây
+    }, 4000);
+  }
+
+  // 5. GHI NHẬT KÝ QUÉT VÀO BẢNG TẠM TRÊN GIAO DIỆN
+  function addScanLog(res) {
+    const emptyRow = document.getElementById("emptyLogRow");
+    if (emptyRow) emptyRow.remove();
+
+    const tbody = document.getElementById("scanLogBody");
+    const timeShort = res.time.split(" ")[1] || res.time;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><b>${timeShort}</b></td>
+      <td><code>${res.student.id}</code></td>
+      <td class="fw-bold text-start">${res.student.name}</td>
+      <td><b>${res.student.className}</b></td>
+      <td>${res.detail}</td>
+      <td><span class="badge ${res.action === 'update' ? 'bg-warning text-dark' : 'bg-success'}">${res.message}</span></td>
+    `;
+    tbody.insertBefore(tr, tbody.firstChild);
+  }
+
+  // 6. ÂM THANH BÍP PHẢN HỒI
+  function playBeepSound() {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = ctx.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(800, ctx.currentTime);
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
       osc.connect(ctx.destination);
       osc.start();
-      osc.stop(ctx.currentTime + 0.12);
+      osc.stop(ctx.currentTime + 0.15);
     } catch(e) {}
+  }
+
+  // 7. CÁC HÀM ĐỔI MẬT KHẨU & OTP
+  async function handleRequestOTP() {
+    const u = document.getElementById("forgotUsername").value.trim();
+    if (!u) { alert("Vui lòng nhập mã cán bộ!"); return; }
+
+    document.getElementById("btnRequestOtp").disabled = true;
+    const res = await callApi({ action: "requestResetGV", username: u });
+    document.getElementById("btnRequestOtp").disabled = false;
+
+    alert(res.message);
+    if (res.success) {
+      document.getElementById("forgotStep1").style.display = "none";
+      document.getElementById("forgotStep2").style.display = "block";
+    }
+  }
+
+  async function handleConfirmOTP() {
+    const u = document.getElementById("forgotUsername").value.trim();
+    const otp = document.getElementById("otpInput").value.trim();
+    const pass = document.getElementById("newPassword").value.trim();
+
+    const res = await callApi({ action: "confirmResetGV", username: u, otp: otp, newPassword: pass });
+    alert(res.message);
+    if (res.success) location.reload();
+  }
+
+  async function handleChangePasswordSubmit() {
+    const oldP = document.getElementById("oldPassInput").value.trim();
+    const newP = document.getElementById("newPassInput").value.trim();
+
+    const res = await callApi({
+      action: "changePassword",
+      username: currentUser.id,
+      oldPassword: oldP,
+      newPassword: newP
+    });
+    alert(res.message);
+    if (res.success) location.reload();
+  }
+
+  function openModal(id) { new bootstrap.Modal(document.getElementById(id)).show(); }
+  function togglePass(id) {
+    const el = document.getElementById(id);
+    el.type = el.type === "password" ? "text" : "password";
   }
 </script>
 </body>
