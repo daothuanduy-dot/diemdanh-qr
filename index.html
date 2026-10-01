@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hệ Thống Quét Mã QR & Điểm Danh v4.0</title>
+  <title>Hệ Thống Quét Mã QR & Điểm Danh v4.5</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     * { box-sizing: border-box; }
@@ -19,12 +19,15 @@
     .online { background: #2e7d32; color: #fff; }
     .offline { background: #c62828; color: #fff; }
 
+    /* MÀN HÌNH POPUP HIỂN THỊ THÔNG TIN NGƯỜI ĐƯỢC QUÉT */
     #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; justify-content: center; align-items: center; }
-    .popup-card { background: #fff; color: #333; padding: 25px; border-radius: 16px; width: 85%; max-width: 380px; text-align: center; }
+    .popup-card { background: #fff; color: #333; padding: 25px; border-radius: 16px; width: 85%; max-width: 380px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
     .popup-card.success { border-top: 8px solid #4caf50; }
     .popup-card.overwrite { border-top: 8px solid #ff9800; }
     .popup-card.error { border-top: 8px solid #f44336; }
-    .timer-bar { height: 5px; background: #1a73e8; width: 100%; margin-top: 15px; animation: shrink 2.5s linear forwards; }
+    
+    /* THANH THỜI GIAN ĐẾM NGHƯỢC 4 GIÂY */
+    .timer-bar { height: 6px; background: #1a73e8; width: 100%; margin-top: 15px; border-radius: 3px; animation: shrink 4s linear forwards; }
     @keyframes shrink { from { width: 100%; } to { width: 0%; } }
   </style>
 </head>
@@ -58,21 +61,22 @@
   </div>
 </div>
 
-<!-- POPUP KẾT QUẢ QUÉT -->
+<!-- POPUP THÔNG BÁO HIỂN THỊ TRONG 4 GIÂY -->
 <div id="overlay">
   <div id="popupCard" class="popup-card">
-    <div id="statusIcon" style="font-size: 44px;">✅</div>
+    <div id="statusIcon" style="font-size: 48px;">✅</div>
     <div id="statusTitle" style="font-weight: bold; font-size: 13px; color: #666; text-transform: uppercase;"></div>
-    <div id="studentName" style="font-size: 22px; font-weight: bold; color: #1a73e8; margin: 6px 0;"></div>
+    <div id="studentName" style="font-size: 22px; font-weight: bold; color: #1a73e8; margin: 8px 0;"></div>
     <div id="studentClass" style="font-weight: bold; color: #d93025; font-size: 16px;"></div>
-    <div id="studentId" style="color: #555; font-size: 14px;"></div>
-    <div id="checkTime" style="font-size: 13px; color: #777; margin-top: 6px;"></div>
+    <div id="studentId" style="color: #555; font-size: 14px; margin-top: 2px;"></div>
+    <div id="checkTime" style="font-size: 13px; color: #777; margin-top: 8px;"></div>
     <div id="scannerInfo" style="font-size: 12px; color: #388e3c; margin-top: 4px;"></div>
     <div id="timerBar" class="timer-bar"></div>
   </div>
 </div>
 
 <script>
+  // 🔴 THAY BẰNG URL WEB APP CỦA BẠN NẾU CÓ THAY ĐỔI
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzWMKryy4yh1W2mbHJ_te7o1kBsv6tHZ7Pneom0foak9JwZ6n_fGKqgtsdwSe5aBIlTwQ/exec";
 
   let currentUser = null;
@@ -188,15 +192,13 @@
     playBeep();
 
     const nowTimestamp = Date.now();
-    
-    // GỬI ĐỒNG BỘ VÀO BẢNG TẠO HÀNG CHỜ
     saveScanOffline(decodedText, nowTimestamp);
     syncOfflineData();
 
-    // TẮT KHÓA QUÉT SAU 2 GIÂY ĐỂ SẴN SÀNG QUÉT MÃ MỚI
+    // Tắt khóa quét mã tiếp theo sau khi Popup đóng (4 giây)
     setTimeout(() => {
       isProcessing = false;
-    }, 2000);
+    }, 4000);
   }
 
   function saveScanOffline(decodedText, timestamp) {
@@ -218,35 +220,21 @@
     isSyncing = true;
     const item = queue[0];
 
-    // CALLBACK XỬ LÝ NHANH KHI SERVER PHẢN HỒI
     window.onSyncItemResp = function(res) {
       const currentQ = getOfflineQueue();
       if (currentQ.length > 0) {
-        currentQ.shift(); // XÓA MỤC ĐÃ ĐỒNG BỘ THÀNH CÔNG KHỎI HÀNG CHỜ
+        currentQ.shift(); // Xóa mục đã đồng bộ thành công khỏi hàng chờ
         saveOfflineQueue(currentQ);
       }
       isSyncing = false;
 
-      // HIỂN THỊ POPUP THÔNG BÁO CHO NGƯỜI QUÉT
+      // HIỂN THỊ POPUP THÔNG BÁO CHO NGƯỜI QUÉT TRONG 4S
       handleResult(res);
 
       if (getOfflineQueue().length > 0) {
-        setTimeout(syncOfflineData, 150);
+        setTimeout(syncOfflineData, 200);
       }
     };
-
-    // TỰ ĐỘNG XÓA HÀNG CHỜ NẾU QUÁ 3.5 GIÂY NGHẼN MẠNG DÙ SERVER ĐÃ GHI DỮ LIỆU
-    const fallbackTimer = setTimeout(() => {
-      if (isSyncing) {
-        const currentQ = getOfflineQueue();
-        if (currentQ.length > 0) {
-          currentQ.shift();
-          saveOfflineQueue(currentQ);
-        }
-        isSyncing = false;
-        if (getOfflineQueue().length > 0) syncOfflineData();
-      }
-    }, 3500);
 
     callAPI({
       action: "checkIn",
@@ -257,6 +245,7 @@
     }, "onSyncItemResp");
   }
 
+  // HÀM BẬT POPUP THÔNG BÁO HIỂN THỊ TRONG DÚNG 4 GIÂY
   function handleResult(res) {
     const overlay = document.getElementById('overlay');
     const card = document.getElementById('popupCard');
@@ -264,9 +253,10 @@
 
     if (popupTimeout) clearTimeout(popupTimeout);
 
+    // Reset lại hiệu ứng thanh thời gian 4s
     timerBar.style.animation = 'none';
     timerBar.offsetHeight; 
-    timerBar.style.animation = 'shrink 2.5s linear forwards';
+    timerBar.style.animation = 'shrink 4s linear forwards';
 
     if (res && res.success) {
       document.getElementById('studentName').innerText = res.student.name;
@@ -295,11 +285,13 @@
       document.getElementById('scannerInfo').innerText = "";
     }
 
+    // Hiển thị Popup
     overlay.style.display = 'flex';
 
+    // Tự động đóng Popup sau đúng 4000ms (4 giây)
     popupTimeout = setTimeout(() => {
       overlay.style.display = 'none';
-    }, 2500);
+    }, 4000);
   }
 
   function handleLogout() {
