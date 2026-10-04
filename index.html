@@ -22,7 +22,7 @@
 
   <div class="max-w-6xl mx-auto space-y-4">
     
-    <!-- CẢNH BÁO LỖI KẾT NỐI (HIỂN THỊ NẾU CÓ LỖI TỪ SUPABASE) -->
+    <!-- CẢNH BÁO LỖI KẾT NỐI -->
     <div id="connection-error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl font-semibold text-sm"></div>
 
     <!-- HEADER -->
@@ -199,23 +199,26 @@
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-gray-700 mb-1">Nội Dung Tiêu Chí Chấm Điểm:</label>
+          <div class="flex justify-between items-center mb-1">
+            <label class="text-xs font-bold text-gray-700">Nội Dung Tiêu Chí Chấm Điểm (Từ CSDL):</label>
+            <span id="tc-count-badge" class="text-[11px] bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full">Tải dữ liệu...</span>
+          </div>
           <select id="list-danh-muc-diem" onchange="toggleCustomPointInput()" class="w-full border p-2.5 rounded-lg text-sm bg-white font-medium text-gray-800">
-            <option value="">-- Chọn Tiêu Chí --</option>
+            <option value="">-- Đang tải danh mục tiêu chí... --</option>
           </select>
         </div>
 
-        <!-- Ô NHẬP ĐIỂM LINH HOẠT (HIỂN THỊ KHI CHỌN KHÁC/LINH HOẠT) -->
+        <!-- Ô NHẬP ĐIỂM LINH HOẠT -->
         <div id="custom-point-box" class="hidden bg-amber-50 p-4 rounded-xl border border-amber-200 space-y-3">
           <h4 class="text-xs font-bold text-amber-800 uppercase flex items-center gap-1"><i class="fa-solid fa-pen"></i> Chấm Điểm Linh Hoạt (Tùy Chỉnh)</h4>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div class="md:col-span-2">
               <label class="block text-xs font-bold text-gray-600 mb-1">Tên Tiêu Chí / Nội Dung Linh Hoạt:</label>
-              <input type="text" id="custom-ten-hd" placeholder="VD: Nhặt được ví tiền trả lại, Vi phạm nói tục..." class="w-full border p-2 rounded-lg text-sm bg-white">
+              <input type="text" id="custom-ten-hd" placeholder="VD: Nhặt được ví tiền, Vi phạm nói tục..." class="w-full border p-2 rounded-lg text-sm bg-white">
             </div>
             <div>
               <label class="block text-xs font-bold text-gray-600 mb-1">Số Điểm Cộng / Trừ:</label>
-              <input type="number" id="custom-diem" placeholder="VD: 5 hoặc -3" class="w-full border p-2 rounded-lg text-sm bg-white font-bold text-center">
+              <input type="number" step="0.25" id="custom-diem" placeholder="VD: 5 hoặc -3" class="w-full border p-2 rounded-lg text-sm bg-white font-bold text-center">
             </div>
           </div>
         </div>
@@ -230,7 +233,7 @@
         </button>
       </section>
 
-      <!-- TAB 3: THỐNG KÊ & CẢNH BÁO HỌC SINH -->
+      <!-- TAB 3: THỐNG KÊ & CẢNH BÁO -->
       <section id="content-tab-3" class="tab-content hidden space-y-6">
         <h2 class="text-lg font-bold text-blue-800 uppercase flex items-center gap-2"><i class="fa-solid fa-chart-pie"></i> 3. Báo Cáo Thống Kê & Cảnh Báo Học Sinh</h2>
         
@@ -254,11 +257,9 @@
           <div class="bg-red-50 border border-red-200 p-4 rounded-xl text-center"><div class="text-2xl font-bold text-red-700" id="tk-stat-tong-tru">-0</div><div class="text-xs font-semibold text-gray-600 uppercase mt-1">Tổng Điểm Trừ</div></div>
         </div>
 
-        <!-- BẢNG CẢNH BÁO HỌC SINH VẮNG / VI PHẠM NHIỀU -->
+        <!-- BẢNG CẢNH BÁO HỌC SINH -->
         <div class="space-y-3">
-          <div class="flex justify-between items-center">
-            <h3 class="font-bold text-red-600 text-base uppercase flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation text-red-500"></i> Bảng Cảnh Báo Học Sinh Nghiêm Trọng (Vắng Nhiều / Điểm Trừ Nhiều)</h3>
-          </div>
+          <h3 class="font-bold text-red-600 text-base uppercase flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation text-red-500"></i> Bảng Cảnh Báo Học Sinh Nghiêm Trọng (Vắng Nhiều / Điểm Trừ Nhiều)</h3>
           <div class="overflow-x-auto border rounded-xl shadow-sm">
             <table class="w-full text-sm text-left">
               <thead class="bg-red-600 text-white uppercase text-xs">
@@ -268,12 +269,11 @@
                   <th class="p-3 text-center">Lớp</th>
                   <th class="p-3 text-center">Số Lượt Vắng</th>
                   <th class="p-3 text-center">Lượt Vi Phạm</th>
-                  <th class="p-3 text-center">Tổng Điểm Trừ</th>
                   <th class="p-3 text-center">Mức Cảnh Báo</th>
                 </tr>
               </thead>
               <tbody id="warning-table-body">
-                <tr><td colspan="7" class="p-6 text-center text-gray-400 bg-gray-50">Nhấn nút "TẢI DỮ LIỆU THỐNG KÊ" để kiểm tra danh sách cảnh báo...</td></tr>
+                <tr><td colspan="6" class="p-6 text-center text-gray-400 bg-gray-50">Nhấn nút "TẢI DỮ LIỆU THỐNG KÊ" để kiểm tra danh sách cảnh báo...</td></tr>
               </tbody>
             </table>
           </div>
@@ -310,7 +310,7 @@
     </main>
   </div>
 
-  <!-- MODAL QUẢN LÝ TIÊU CHÍ ĐIỂM (THÊM / XÓA TIÊU CHÍ) -->
+  <!-- MODAL QUẢN LÝ TIÊU CHÍ ĐIỂM -->
   <div id="modal-quan-ly-tieu-chi" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
     <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 border border-gray-100 max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center border-b pb-3">
@@ -318,28 +318,33 @@
         <button onclick="closeQuanLyTieuChiModal()" class="text-gray-400 hover:text-red-500 font-bold text-lg">&times;</button>
       </div>
 
-      <!-- FORM THÊM TIÊU CHÍ MỚI -->
       <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2 text-sm">
         <h4 class="font-bold text-xs uppercase text-blue-700">Thêm Tiêu Chí Mới:</h4>
-        <div>
-          <label class="block text-xs font-semibold text-gray-600">Mã tiêu chí (VD: VP07, KT05):</label>
-          <input type="text" id="add-tc-ma" placeholder="VP07" class="w-full border p-2 rounded-lg bg-white">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600">Mã HĐ (VD: HD14):</label>
+            <input type="text" id="add-tc-ma" placeholder="HD14" class="w-full border p-2 rounded-lg bg-white">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600">Mảng thi đua:</label>
+            <input type="text" id="add-tc-mang" placeholder="Nề nếp / Học tập" class="w-full border p-2 rounded-lg bg-white">
+          </div>
         </div>
         <div>
           <label class="block text-xs font-semibold text-gray-600">Tên tiêu chí / Nội dung:</label>
-          <input type="text" id="add-tc-ten" placeholder="Nội dung vi phạm hoặc khen thưởng..." class="w-full border p-2 rounded-lg bg-white">
+          <input type="text" id="add-tc-ten" placeholder="Nội dung tiêu chí..." class="w-full border p-2 rounded-lg bg-white">
         </div>
         <div class="grid grid-cols-2 gap-2">
           <div>
             <label class="block text-xs font-semibold text-gray-600">Loại:</label>
             <select id="add-tc-loai" class="w-full border p-2 rounded-lg bg-white">
-              <option value="tru">Điểm Trừ (-)</option>
-              <option value="cong">Điểm Cộng (+)</option>
+              <option value="tru">Vi phạm (-)</option>
+              <option value="cong">Khen thưởng (+)</option>
             </select>
           </div>
           <div>
             <label class="block text-xs font-semibold text-gray-600">Số điểm:</label>
-            <input type="number" id="add-tc-diem" placeholder="-2 hoặc 5" class="w-full border p-2 rounded-lg bg-white">
+            <input type="number" step="0.25" id="add-tc-diem" placeholder="-2 hoặc 5" class="w-full border p-2 rounded-lg bg-white">
           </div>
         </div>
         <button onclick="addNewTieuChi()" class="w-full bg-emerald-600 text-white py-2 rounded-lg font-bold hover:bg-emerald-700 text-xs shadow-sm">
@@ -347,12 +352,9 @@
         </button>
       </div>
 
-      <!-- DANH SÁCH TIÊU CHÍ HIỆN CÓ ĐỂ XÓA BỚT -->
       <div>
-        <h4 class="font-bold text-xs uppercase text-gray-700 mb-2">Danh Sách Tiêu Chí Hiện Có:</h4>
-        <div id="tc-list-manager" class="space-y-1.5 max-h-[220px] overflow-y-auto pr-1">
-          <!-- Render danh sách tiêu chí -->
-        </div>
+        <h4 class="font-bold text-xs uppercase text-gray-700 mb-2">Danh Sách Tiêu Chí Trong CSDL:</h4>
+        <div id="tc-list-manager" class="space-y-1.5 max-h-[220px] overflow-y-auto pr-1"></div>
       </div>
 
       <div class="pt-2">
@@ -476,20 +478,26 @@
       });
     }
 
-    // 4. DANH MỤC TIÊU CHÍ VÀ LỌC TIÊU CHÍ CỘNG / TRỪ
+    // 4. TẢI VÀ LỌC TOÀN BỘ TIÊU CHÍ ĐIỂM TỪ SUPABASE
     async function fetchDanhMucDiem() {
       try {
-        const { data, error } = await _supabase.from('danh_muc_diem').select('*').order('id', { ascending: true });
+        let { data, error } = await _supabase.from('danh_muc_diem').select('*');
+        if (error) {
+          console.error("Lỗi fetch danh_muc_diem:", error);
+        }
+
         if (data && data.length > 0) {
-          allDanhMucDiem = data;
+          // Sắp xếp theo ma_hd
+          allDanhMucDiem = data.sort((a, b) => 
+            String(a.ma_hd || '').localeCompare(String(b.ma_hd || ''), 'vi', { numeric: true })
+          );
         } else {
           allDanhMucDiem = [
-            { ma_hd: 'VP01', ten_hd: 'Đi học muộn', loai: 'tru', diem: -2 },
-            { ma_hd: 'VP02', ten_hd: 'Không mặc đồng phục', loai: 'tru', diem: -3 },
-            { ma_hd: 'KT01', ten_hd: 'Đạt điểm 10 kiểm tra', loai: 'cong', diem: 5 },
-            { ma_hd: 'KT02', ten_hd: 'Tham gia phong trào xuất sắc', loai: 'cong', diem: 10 }
+            { ma_hd: 'HD01a', ten_hd: 'Sổ đầu bài: Điểm 10 miệng SĐB', mang: 'Học tập', loai: 'cong', diem: 1 },
+            { ma_hd: 'HD02a', ten_hd: 'Nề nếp: Đi học muộn', mang: 'Nề nếp', loai: 'tru', diem: -1 }
           ];
         }
+
         filterDanhMucDiem();
       } catch (e) {
         console.error("Lỗi tải danh mục điểm:", e);
@@ -500,23 +508,29 @@
       const loaiRadio = document.querySelector('input[name="loai-diem"]:checked');
       const loaiSelected = loaiRadio ? loaiRadio.value : 'tru';
       const select = document.getElementById('list-danh-muc-diem');
+      const badge = document.getElementById('tc-count-badge');
       if (!select) return;
-
-      select.innerHTML = '<option value="">-- Chọn Tiêu Chí --</option>';
 
       const filtered = allDanhMucDiem.filter(item => {
         const itemLoai = String(item.loai || '').toLowerCase();
         const diemVal = parseFloat(item.diem) || 0;
+
         if (loaiSelected === 'tru') {
-          return itemLoai === 'tru' || itemLoai === 'vi_pham' || diemVal < 0;
+          return itemLoai.includes('tru') || itemLoai.includes('vi_pham') || itemLoai.includes('vi phạm') || itemLoai.includes('trừ') || diemVal < 0;
         } else {
-          return itemLoai === 'cong' || itemLoai === 'khen_thuong' || diemVal > 0;
+          return itemLoai.includes('cong') || itemLoai.includes('khen') || itemLoai.includes('khen thưởng') || itemLoai.includes('cộng') || diemVal > 0;
         }
       });
 
+      if (badge) badge.innerText = `Có ${filtered.length} tiêu chí trong CSDL`;
+
+      select.innerHTML = `<option value="">-- Chọn Tiêu Chí (${filtered.length} tiêu chí) --</option>`;
+
       filtered.forEach(item => {
-        const dStr = item.diem > 0 ? `+${item.diem}` : item.diem;
-        select.innerHTML += `<option value="${item.ma_hd || item.id}">${item.ten_hd} (${dStr}đ)</option>`;
+        const diemNum = parseFloat(item.diem) || 0;
+        const dStr = diemNum > 0 ? `+${diemNum}` : `${diemNum}`;
+        const mangStr = item.mang ? ` - [Mảng: ${item.mang}]` : '';
+        select.innerHTML += `<option value="${item.ma_hd}">[${item.ma_hd}] ${item.ten_hd}${mangStr} (${dStr}đ)</option>`;
       });
 
       select.innerHTML += `<option value="LINH_HOAT" class="font-bold text-amber-600">➕ [Nhập tiêu chí & điểm linh hoạt...]</option>`;
@@ -533,7 +547,7 @@
       }
     }
 
-    // 5. QUẢN LÝ TIÊU CHÍ (THÊM / XÓA TIÊU CHÍ MODAL)
+    // 5. QUẢN LÝ TIÊU CHÍ (THÊM / XÓA)
     function openQuanLyTieuChiModal() {
       renderTieuChiManagerList();
       document.getElementById('modal-quan-ly-tieu-chi').classList.remove('hidden');
@@ -549,17 +563,19 @@
       container.innerHTML = '';
 
       allDanhMucDiem.forEach((item) => {
-        const isCong = item.loai === 'cong' || item.diem > 0;
+        const itemLoai = String(item.loai || '').toLowerCase();
+        const diemVal = parseFloat(item.diem) || 0;
+        const isCong = itemLoai.includes('cong') || itemLoai.includes('khen') || diemVal > 0;
         const badgeColor = isCong ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
-        const dStr = item.diem > 0 ? `+${item.diem}` : item.diem;
+        const dStr = diemVal > 0 ? `+${diemVal}` : `${diemVal}`;
 
         container.innerHTML += `
           <div class="flex justify-between items-center bg-white p-2 border rounded-lg text-xs">
             <div>
-              <strong class="font-mono">${item.ma_hd || '---'}</strong> - <span>${item.ten_hd}</span>
+              <strong class="font-mono text-blue-600">[${item.ma_hd}]</strong> <span>${item.ten_hd}</span>
               <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${badgeColor} ml-1">${dStr}đ</span>
             </div>
-            <button onclick="deleteTieuChi('${item.id || item.ma_hd}')" class="text-red-500 hover:text-red-700 font-bold px-2 py-0.5 rounded border border-red-200 bg-red-50">
+            <button onclick="deleteTieuChi('${item.ma_hd}')" class="text-red-500 hover:text-red-700 font-bold px-2 py-0.5 rounded border border-red-200 bg-red-50">
               <i class="fa-solid fa-trash"></i> Xóa
             </button>
           </div>
@@ -569,6 +585,7 @@
 
     async function addNewTieuChi() {
       const ma = document.getElementById('add-tc-ma').value.trim();
+      const mang = document.getElementById('add-tc-mang').value.trim();
       const ten = document.getElementById('add-tc-ten').value.trim();
       const loai = document.getElementById('add-tc-loai').value;
       let diem = parseFloat(document.getElementById('add-tc-diem').value);
@@ -579,11 +596,19 @@
       if (loai === 'cong' && diem < 0) diem = Math.abs(diem);
 
       try {
-        const { error } = await _supabase.from('danh_muc_diem').insert([{ ma_hd: ma, ten_hd: ten, loai: loai, diem: diem }]);
+        const { error } = await _supabase.from('danh_muc_diem').insert([{ 
+          ma_hd: ma, 
+          mang: mang || 'Khác',
+          ten_hd: ten, 
+          loai: loai === 'cong' ? 'Khen thưởng' : 'Vi phạm', 
+          diem: diem 
+        }]);
+
         if (error) throw error;
 
-        alert("Đã thêm tiêu chí mới thành công!");
+        alert("Đã thêm tiêu chí mới vào CSDL!");
         document.getElementById('add-tc-ma').value = '';
+        document.getElementById('add-tc-mang').value = '';
         document.getElementById('add-tc-ten').value = '';
         document.getElementById('add-tc-diem').value = '';
         
@@ -594,11 +619,13 @@
       }
     }
 
-    async function deleteTieuChi(identifier) {
-      if (!confirm("Bạn có chắc chắn muốn xóa tiêu chí này khỏi CSDL?")) return;
+    async function deleteTieuChi(maHD) {
+      if (!confirm(`Bạn có chắc muốn xóa tiêu chí ${maHD} khỏi CSDL?`)) return;
 
       try {
-        await _supabase.from('danh_muc_diem').delete().or(`id.eq.${identifier},ma_hd.eq.${identifier}`);
+        const { error } = await _supabase.from('danh_muc_diem').delete().eq('ma_hd', maHD);
+        if (error) throw error;
+
         alert("Đã xóa tiêu chí thành công!");
         await fetchDanhMucDiem();
         renderTieuChiManagerList();
@@ -607,7 +634,7 @@
       }
     }
 
-    // 6. CHẤM ĐIỂM THI ĐUA & CHẤM LINH HOẠT
+    // 6. CHẤM ĐIỂM THI ĐUA
     async function submitChamDiem() {
       const lop = document.getElementById('cd-lop').value;
       const doiTuong = document.getElementById('cd-hocsinh').value;
@@ -620,13 +647,15 @@
 
       let tenHD = "";
       let diemSo = 0;
+      let maHD = tcVal;
 
       if (tcVal === 'LINH_HOAT') {
         tenHD = document.getElementById('custom-ten-hd').value.trim();
         diemSo = parseFloat(document.getElementById('custom-diem').value);
+        maHD = 'LINH_HOAT';
         if (!tenHD || isNaN(diemSo)) return alert("Vui lòng nhập tên tiêu chí và số điểm linh hoạt!");
       } else {
-        const found = allDanhMucDiem.find(d => String(d.ma_hd) === String(tcVal) || String(d.id) === String(tcVal));
+        const found = allDanhMucDiem.find(d => String(d.ma_hd) === String(tcVal));
         if (found) {
           tenHD = found.ten_hd;
           diemSo = parseFloat(found.diem) || 0;
@@ -635,7 +664,7 @@
         }
       }
 
-      const chiTietFull = ghiChu ? `${tenHD} (${ghiChu})` : tenHD;
+      const chiTietFull = ghiChu ? `[${maHD}] ${tenHD} (${ghiChu})` : `[${maHD}] ${tenHD}`;
 
       try {
         await _supabase.from('diem_danh_master').insert([{
@@ -646,7 +675,7 @@
           ma_nguoi_cap_nhat: currentUser.ho_ten
         }]);
 
-        alert(`Đã lưu thành công! Điểm ghi nhận: ${diemSo > 0 ? '+' + diemSo : diemSo} điểm.`);
+        alert(`Đã lưu kết quả thành công! Ghi nhận: ${diemSo > 0 ? '+' + diemSo : diemSo} điểm.`);
         document.getElementById('cd-ghichu').value = '';
         document.getElementById('custom-ten-hd').value = '';
         document.getElementById('custom-diem').value = '';
@@ -655,7 +684,7 @@
       }
     }
 
-    // 7. THỐNG KÊ VÀ BẢNG CẢNH BÁO HỌC SINH VẮNG / ĐIỂM TRỪ NHIỀU
+    // 7. THỐNG KÊ VÀ BẢNG CẢNH BÁO
     function onThongKeKhoiChange() {
       populateLopDropdown('tk-khoi', 'tk-lop');
     }
@@ -665,18 +694,17 @@
       const lopFilter = document.getElementById('tk-lop').value;
       const tbody = document.getElementById('warning-table-body');
 
-      tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-gray-400">Đang phân tích dữ liệu...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-400">Đang phân tích dữ liệu CSDL...</td></tr>';
 
       try {
         let { data: masterData } = await _supabase.from('diem_danh_master').select('*');
         let { data: hsData } = await _supabase.from('hoc_sinh').select('ma_hs, ho_ten, ten_lop, khoi_id');
 
         if (!masterData || masterData.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-gray-400">Không có dữ liệu vi phạm/vắng nào trong CSDL.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-400">Chưa có dữ liệu chấm điểm/vắng nào trong CSDL.</td></tr>';
           return;
         }
 
-        // Lọc theo Khối / Lớp nếu chọn
         if (lopFilter) {
           hsData = (hsData || []).filter(h => h.ten_lop === lopFilter);
         } else if (khoiFilter) {
@@ -690,12 +718,10 @@
             ho_ten: h.ho_ten,
             ten_lop: h.ten_lop,
             so_buoi_vang: 0,
-            so_luot_vi_pham: 0,
-            tong_diem_tru: 0
+            so_luot_vi_pham: 0
           });
         });
 
-        // Gom nhóm tính toán
         masterData.forEach(d => {
           const mHS = String(d.ma_hs || '').trim();
           if (studentMap.has(mHS)) {
@@ -707,18 +733,16 @@
             }
             if (status.includes('muon') || status === 'diem_tru') {
               st.so_luot_vi_pham += 1;
-              st.tong_diem_tru -= 2; // Giả định trung bình -2d/lỗi
             }
           }
         });
 
-        // Lọc ra các HS có dấu hiệu nguy cơ: Vắng >= 2 buổi HOẶC vi phạm >= 2 lần
-        const warningList = Array.from(studentMap.values()).filter(s => s.so_buoi_vang >= 2 || s.so_luot_vi_pham >= 2 || s.tong_diem_tru <= -6);
+        const warningList = Array.from(studentMap.values()).filter(s => s.so_buoi_vang >= 2 || s.so_luot_vi_pham >= 2);
 
         tbody.innerHTML = '';
 
         if (warningList.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-emerald-600 font-bold bg-green-50"><i class="fa-solid fa-circle-check"></i> Tuyệt vời! Không phát hiện học sinh nào có nguy cơ vắng nhiều hoặc vi phạm nặng.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-emerald-600 font-bold bg-green-50"><i class="fa-solid fa-circle-check"></i> Không phát hiện học sinh nào vi phạm hoặc vắng nhiều.</td></tr>';
           return;
         }
 
@@ -741,18 +765,17 @@
               <td class="p-3 text-center font-semibold">${st.ten_lop}</td>
               <td class="p-3 text-center font-bold ${st.so_buoi_vang > 0 ? 'text-red-600' : 'text-gray-400'}">${st.so_buoi_vang} buổi</td>
               <td class="p-3 text-center font-bold ${st.so_luot_vi_pham > 0 ? 'text-amber-600' : 'text-gray-400'}">${st.so_luot_vi_pham} lần</td>
-              <td class="p-3 text-center font-bold text-red-600">${st.tong_diem_tru}đ</td>
               <td class="p-3 text-center">${badge}</td>
             </tr>
           `;
         });
 
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500">Lỗi phân tích thống kê: ${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Lỗi phân tích: ${err.message}</td></tr>`;
       }
     }
 
-    // 8. CÁC TAB KHÁC VÀ HELPER
+    // 8. CÁC HÀM HELPER KHÁC
     async function fetchStudentsByClass(className) {
       if (!className) { currentClassStudents = []; return []; }
       try {
