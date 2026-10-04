@@ -22,6 +22,9 @@
 
   <div class="max-w-6xl mx-auto space-y-4">
     
+    <!-- CẢNH BÁO LỖI KẾT NỐI (NẾU CÓ) -->
+    <div id="connection-error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl font-semibold text-sm"></div>
+
     <!-- HEADER -->
     <header class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
       <div>
@@ -337,19 +340,26 @@
     let html5QrcodeScanner = null;
     let pendingQRData = null;
 
-    // 2. KHỞI TẠO TỰ ĐỘNG
+    // 2. KHỞI TẠO TỰ ĐỘNG KHỔNG PHỤ THUỘC VÀO TỐC ĐỘ MẠNG
     document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById('tk-ngay').valueAsDate = new Date();
       await fetchAllClasses();
       await fetchDanhMucDiem();
     });
 
-    // 3. TẢI DANH SÁCH LỚP HỌC (TỰ ĐỘNG NHẬN DIỆN KHỐI THÔNG MINH)
+    // 3. THUẬT TOÁN LẤY LỚP TỰ ĐỘNG BÓC TÁCH KHỐI DÙ CSDL CÓ BỊ LỖI KHOI_ID HAY KHÔNG
     async function fetchAllClasses() {
+      showLoadingStateInDropdowns('Đang tải danh sách lớp...');
+
       try {
         let { data, error } = await _supabase.from('lop').select('ten_lop, khoi_id').order('ten_lop', { ascending: true });
 
-        if (error || !data || data.length === 0) {
+        if (error) {
+          showConnectionError("Lỗi kết nối CSDL Supabase: " + error.message + ". Vui lòng kiểm tra API Key.");
+          return;
+        }
+
+        if (!data || data.length === 0) {
           const resHS = await _supabase.from('hoc_sinh').select('ten_lop, khoi_id');
           data = resHS.data || [];
         }
@@ -361,15 +371,12 @@
           const cleanLop = String(rawLop).trim();
           if (!cleanLop) return;
 
-          // Tự động bóc tách số khối từ tên lớp (ví dụ: 10A1 -> Khối 10)
-          let khoiId = String(item.khoi_id || '').trim();
-          if (!khoiId || khoiId === 'null' || khoiId === 'undefined') {
-            const match = cleanLop.match(/\d+/);
-            khoiId = match ? match[0] : '10';
-          }
+          // Tự động bóc tách số khối từ Tên Lớp (VD: '10A1' -> '10', '11B2' -> '11', '12C3' -> '12')
+          const digits = cleanLop.match(/\d+/);
+          const detectedKhoi = digits ? digits[0] : '10';
 
           if (!classMap.has(cleanLop)) {
-            classMap.set(cleanLop, { ten_lop: cleanLop, khoi_id: khoiId });
+            classMap.set(cleanLop, { ten_lop: cleanLop, khoi_id: detectedKhoi });
           }
         });
 
@@ -377,13 +384,29 @@
           a.ten_lop.localeCompare(b.ten_lop, 'vi', { numeric: true })
         );
 
-      } catch (err) {
-        console.error("Lỗi lấy danh sách lớp:", err);
-      }
+        // Nạp ngay danh sách lớp vào toàn bộ các Dropdown trên giao diện
+        populateLopDropdown('bv-khoi', 'bv-lop');
+        populateLopDropdown('cd-khoi', 'cd-lop');
+        populateLopDropdown('tk-khoi', 'tk-lop');
 
-      populateLopDropdown('bv-khoi', 'bv-lop');
-      populateLopDropdown('cd-khoi', 'cd-lop');
-      populateLopDropdown('tk-khoi', 'tk-lop');
+      } catch (err) {
+        showConnectionError("Lỗi không xác định khi tải dữ liệu: " + err.message);
+      }
+    }
+
+    function showLoadingStateInDropdowns(text) {
+      ['bv-lop', 'cd-lop', 'tk-lop'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = `<option value="">-- ${text} --</option>`;
+      });
+    }
+
+    function showConnectionError(msg) {
+      const errBox = document.getElementById('connection-error');
+      if (errBox) {
+        errBox.innerText = msg;
+        errBox.classList.remove('hidden');
+      }
     }
 
     function populateLopDropdown(khoiSelectId, lopSelectId) {
@@ -396,10 +419,17 @@
 
       const filtered = allLopList.filter(item => {
         if (!khoiVal) return true;
-        const itemKhoi = String(item.khoi_id || '').trim();
-        const itemLop = String(item.ten_lop || '').trim();
-        return itemKhoi === khoiVal || itemLop.startsWith(khoiVal) || itemLop.includes(khoiVal);
+        const cleanLop = String(item.ten_lop || '').trim();
+        const cleanKhoi = String(item.khoi_id || '').trim();
+
+        // Khớp nếu khoi_id bằng, hoặc tên lớp bắt đầu bằng số khối (VD: '10A1' khớp '10')
+        return cleanKhoi === khoiVal || cleanLop.startsWith(khoiVal);
       });
+
+      if (filtered.length === 0) {
+        lopSelect.innerHTML = '<option value="">-- Không tìm thấy lớp --</option>';
+        return;
+      }
 
       filtered.forEach(item => {
         lopSelect.innerHTML += `<option value="${item.ten_lop}">${item.ten_lop}</option>`;
