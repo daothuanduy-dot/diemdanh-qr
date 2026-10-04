@@ -22,7 +22,7 @@
 </head>
 <body class="p-3 md:p-6 min-h-screen">
 
-  <!-- MÀN HÌNH KHÓA ĐĂNG NHẬP BẮT BUỘC (ĐỐI CHIẾU BẢNG CAN_BO) -->
+  <!-- MÀN HÌNH KHÓA ĐĂNG NHẬP BẮT BUỘC (ĐỐI CHIẾU MÃ + MẬT KHẨU) -->
   <div id="login-overlay" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[100] flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-gray-100">
       <div class="text-center border-b pb-3">
@@ -32,10 +32,14 @@
       <div class="space-y-3 text-sm">
         <div>
           <label class="block text-xs font-bold text-gray-700 mb-1">Mã Cán Bộ / Tên Đăng Nhập:</label>
-          <input type="text" id="login-user-input" placeholder="Nhập mã cán bộ hoặc tên..." class="w-full border p-2.5 rounded-lg bg-gray-50 font-bold text-gray-800 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+          <input type="text" id="login-user-input" placeholder="Nhập mã cán bộ..." class="w-full border p-2.5 rounded-lg bg-gray-50 font-bold text-gray-800 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1">Mật Khẩu:</label>
+          <input type="password" id="login-password-input" placeholder="Nhập mật khẩu..." class="w-full border p-2.5 rounded-lg bg-gray-50 font-bold text-gray-800 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">
         </div>
         <div id="login-error-msg" class="text-xs font-bold text-red-600 hidden">
-          <i class="fa-solid fa-circle-exclamation"></i> Không tìm thấy cán bộ trong bảng CSDL `can_bo`!
+          <i class="fa-solid fa-circle-exclamation"></i> Tên đăng nhập hoặc mật khẩu không chính xác!
         </div>
       </div>
       <div class="pt-2">
@@ -681,6 +685,7 @@
           <div class="space-y-3 text-sm">
             <div><label class="block text-xs font-bold text-gray-700 mb-1">Mã Cán Bộ (Dùng đăng nhập):</label><input type="text" id="adm-cb-ma" placeholder="VD: CB001" class="w-full border p-2.5 rounded-lg bg-white font-mono"></div>
             <div><label class="block text-xs font-bold text-gray-700 mb-1">Họ và Tên Cán Bộ:</label><input type="text" id="adm-cb-name" placeholder="VD: Đào Thuận Duy" class="w-full border p-2.5 rounded-lg bg-white"></div>
+            <div><label class="block text-xs font-bold text-gray-700 mb-1">Mật Khẩu Đăng Nhập:</label><input type="password" id="adm-cb-pass" placeholder="VD: 123456" class="w-full border p-2.5 rounded-lg bg-white"></div>
             <div><label class="block text-xs font-bold text-gray-700 mb-1">Vai Trò / Phân Quyền:</label>
               <select id="adm-cb-role" class="w-full border p-2.5 rounded-lg bg-white font-semibold text-blue-700">
                 <option value="Admin">Quản Trị Viên (Admin)</option>
@@ -845,7 +850,6 @@
         } catch(e) {}
       }
 
-      // Chưa đăng nhập -> Hiện Overlay bắt buộc và Nút Đăng Nhập
       currentUser = null;
       document.getElementById('user-name').innerText = "Chưa đăng nhập";
       document.getElementById('user-role').innerText = "Chưa đăng nhập";
@@ -860,24 +864,29 @@
 
     async function performCanBoLogin() {
       const inputVal = document.getElementById('login-user-input').value.trim();
+      const passVal = document.getElementById('login-password-input').value.trim();
       const errBox = document.getElementById('login-error-msg');
       errBox.classList.add('hidden');
 
-      if (!inputVal) return alert("Vui lòng nhập Mã Cán Bộ hoặc Tên Đăng Nhập!");
+      if (!inputVal || !passVal) return alert("Vui lòng nhập đầy đủ Tên đăng nhập và Mật khẩu!");
 
       try {
         let { data, error } = await _supabase.from('can_bo').select('*');
         let matched = null;
 
         if (data && data.length > 0) {
-          matched = data.find(c => 
-            String(c.ma_can_bo || c.ma_cb || '').toLowerCase() === inputVal.toLowerCase() ||
-            String(c.ten_dang_nhap || '').toLowerCase() === inputVal.toLowerCase() ||
-            String(c.ho_ten || '').toLowerCase() === inputVal.toLowerCase()
-          );
+          matched = data.find(c => {
+            const dbUser = String(c.ma_cb || c.ma_can_bo || c.ten_dang_nhap || '').toLowerCase();
+            const dbPass = String(c.mat_khau || c.password || c.pass || '');
+            
+            const isUserMatch = dbUser === inputVal.toLowerCase() || String(c.ho_ten || '').toLowerCase() === inputVal.toLowerCase();
+            const isPassMatch = !dbPass || dbPass === passVal;
+
+            return isUserMatch && isPassMatch;
+          });
         }
 
-        if (!matched && inputVal.toLowerCase() === 'admin') {
+        if (!matched && inputVal.toLowerCase() === 'admin' && passVal === 'admin123') {
           matched = { ho_ten: "Đào Thuận Duy (Admin)", vai_tro: "Admin", ma_cb: "ADMIN" };
         }
 
@@ -887,7 +896,7 @@
         }
 
         currentUser = {
-          ma_cb: matched.ma_can_bo || matched.ma_cb || inputVal,
+          ma_cb: matched.ma_cb || matched.ma_can_bo || inputVal,
           ho_ten: matched.ho_ten || matched.ten_can_bo || inputVal,
           vai_tro: matched.vai_tro || matched.chuc_vu || 'Cán Bộ'
         };
@@ -1497,21 +1506,28 @@
     async function addCanBoAdmin() {
       const maCB = document.getElementById('adm-cb-ma').value.trim();
       const hoTen = document.getElementById('adm-cb-name').value.trim();
+      const passVal = document.getElementById('adm-cb-pass').value.trim();
       const vaiTro = document.getElementById('adm-cb-role').value;
 
-      if (!maCB || !hoTen) return alert("Vui lòng điền đủ Mã cán bộ và Họ tên!");
+      if (!maCB || !hoTen || !passVal) return alert("Vui lòng điền đủ Mã cán bộ, Họ tên và Mật khẩu!");
 
       try {
-        const { error } = await _supabase.from('can_bo').insert([{
-          ma_can_bo: maCB,
-          ho_ten: hoTen,
-          vai_tro: vaiTro
-        }]);
+        let payload = { ma_cb: maCB, ho_ten: hoTen, mat_khau: passVal, vai_tro: vaiTro };
 
-        if (error) throw error;
+        let { error } = await _supabase.from('can_bo').insert([payload]);
+
+        if (error && (error.message.includes('ma_cb') || error.message.includes('column'))) {
+          payload = { ma_can_bo: maCB, ho_ten: hoTen, mat_khau: passVal, vai_tro: vaiTro };
+          const res2 = await _supabase.from('can_bo').insert([payload]);
+          if (res2.error) throw res2.error;
+        } else if (error) {
+          throw error;
+        }
+
         alert(`Thêm cán bộ ${hoTen} (${maCB}) vào CSDL thành công!`);
         document.getElementById('adm-cb-ma').value = '';
         document.getElementById('adm-cb-name').value = '';
+        document.getElementById('adm-cb-pass').value = '';
       } catch (e) { alert("Lỗi thêm cán bộ: " + e.message); }
     }
 
