@@ -267,7 +267,7 @@
     </main>
   </div>
 
-  <!-- POPUP MODAL THIẾT LẬP TUẦN HỌC TỐT -->
+  <!-- MODAL THIẾT LẬP TUẦN HỌC TỐT -->
   <div id="tuan-hoc-tot-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
     <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-gray-100">
       <div class="flex justify-between items-center border-b pb-3">
@@ -303,7 +303,7 @@
     </div>
   </div>
 
-  <!-- POPUP MODAL XÁC NHẬN MÃ QR KHAI THÁC DỮ LIỆU CÓ THÔNG BÁO KHÔNG TÌM THẤY -->
+  <!-- MODAL XÁC NHẬN MÃ QR KHAI THÁC DỮ LIỆU CÓ CẢNH BÁO MÃ KHÔNG TỒN TẠI -->
   <div id="qr-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
     <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-gray-100">
       <div class="flex justify-between items-center border-b pb-3">
@@ -344,56 +344,34 @@
       await fetchDanhMucDiem();
     });
 
-    // 3. TẢI TOÀN BỘ DANH SÁCH LỚP HỌC (TỪ TẤT CẢ BẢNG BẰNG GỘP SET DỮ LIỆU)
+    // 3. TẢI DANH SÁCH LỚP HỌC CHUẨN HÓA TRỰC TIẾP TỪ BẢNG 'lop'
     async function fetchAllClasses() {
       try {
+        let { data, error } = await _supabase.from('lop').select('ten_lop, khoi_id').order('ten_lop', { ascending: true });
+
+        if (error || !data || data.length === 0) {
+          console.warn("Bảng lop trống, tải dự phòng từ bảng hoc_sinh...");
+          const resHS = await _supabase.from('hoc_sinh').select('ten_lop, khoi_id').not('ten_lop', 'is', null);
+          data = resHS.data || [];
+        }
+
         const setLop = new Set();
-        let classData = [];
+        allLopList = [];
 
-        // Thử Bảng 'lop'
-        let { data: resLop } = await _supabase.from('lop').select('ten_lop, khoi_id');
-        if (resLop) {
-          resLop.forEach(item => {
-            const l = String(item.ten_lop || '').trim();
-            if (l && !setLop.has(l)) {
-              setLop.add(l);
-              classData.push({ ten_lop: l, khoi_id: String(item.khoi_id || '') });
-            }
-          });
-        }
+        (data || []).forEach(item => {
+          const l = String(item.ten_lop || '').trim();
+          if (l && !setLop.has(l)) {
+            setLop.add(l);
+            let k = String(item.khoi_id || '');
+            if (!k) { const m = l.match(/^\d+/); if (m) k = m[0]; }
+            allLopList.push({ ten_lop: l, khoi_id: k });
+          }
+        });
 
-        // Thử Bảng 'hoc_sinh'
-        let { data: resHS } = await _supabase.from('hoc_sinh').select('ten_lop, khoi_id').not('ten_lop', 'is', null);
-        if (resHS) {
-          resHS.forEach(item => {
-            const l = String(item.ten_lop || '').trim();
-            if (l && !setLop.has(l)) {
-              setLop.add(l);
-              let k = String(item.khoi_id || '');
-              if (!k) { const m = l.match(/^\d+/); if (m) k = m[0]; }
-              classData.push({ ten_lop: l, khoi_id: k });
-            }
-          });
-        }
-
-        // Thử Bảng 'danh_sach'
-        let { data: resDS } = await _supabase.from('danh_sach').select('lop, khoi').not('lop', 'is', null);
-        if (resDS) {
-          resDS.forEach(item => {
-            const l = String(item.lop || '').trim();
-            if (l && !setLop.has(l)) {
-              setLop.add(l);
-              let k = String(item.khoi || '');
-              if (!k) { const m = l.match(/^\d+/); if (m) k = m[0]; }
-              classData.push({ ten_lop: l, khoi_id: k });
-            }
-          });
-        }
-
-        allLopList = classData.sort((a, b) => a.ten_lop.localeCompare(b.ten_lop, 'vi', { numeric: true }));
+        allLopList.sort((a, b) => a.ten_lop.localeCompare(b.ten_lop, 'vi', { numeric: true }));
 
       } catch (err) {
-        console.error("Lỗi lấy danh sách lớp:", err);
+        console.error("Lỗi kết nối CSDL khi lấy danh sách Lớp:", err);
       }
 
       populateLopDropdown('bv-khoi', 'bv-lop');
@@ -418,7 +396,7 @@
       });
     }
 
-    // 4. TẢI HỌC SINH THUỘC LỚP CỤ THỂ
+    // 4. TẢI DANH SÁCH HỌC SINH TỪ BẢNG 'hoc_sinh'
     async function fetchStudentsByClass(className) {
       if (!className) {
         currentClassStudents = [];
@@ -427,49 +405,28 @@
 
       try {
         const cleanClassName = className.trim();
-        let studentMap = new Map();
 
-        // 1. Tìm trong bảng 'hoc_sinh'
-        let { data: dataHS } = await _supabase
+        let { data, error } = await _supabase
           .from('hoc_sinh')
           .select('*')
-          .ilike('ten_lop', cleanClassName);
+          .eq('ten_lop', cleanClassName)
+          .order('ho_ten', { ascending: true });
 
-        if (dataHS) {
-          dataHS.forEach(s => {
-            const m = String(s.ma_hs || s.id || '').trim();
-            if (m) {
-              studentMap.set(m, {
-                ma_hs: m,
-                ho_ten: String(s.ho_ten || '').trim(),
-                ngay_sinh: s.ngay_sinh || '',
-                ten_lop: cleanClassName
-              });
-            }
-          });
+        if (error || !data || data.length === 0) {
+          let resDS = await _supabase
+            .from('danh_sach')
+            .select('*')
+            .eq('lop', cleanClassName);
+          data = resDS.data || [];
         }
 
-        // 2. Tìm thêm trong bảng 'danh_sach'
-        let { data: dataDS } = await _supabase
-          .from('danh_sach')
-          .select('*')
-          .ilike('lop', cleanClassName);
+        currentClassStudents = (data || []).map(s => ({
+          ma_hs: String(s.ma_hs || s.id || '').trim(),
+          ho_ten: String(s.ho_ten || s.hoten || '').trim(),
+          ngay_sinh: s.ngay_sinh || s.ngaysinh || '',
+          ten_lop: cleanClassName
+        })).sort((a, b) => a.ho_ten.localeCompare(b.ho_ten, 'vi'));
 
-        if (dataDS) {
-          dataDS.forEach(s => {
-            const m = String(s.ma_hs || s.id || '').trim();
-            if (m && !studentMap.has(m)) {
-              studentMap.set(m, {
-                ma_hs: m,
-                ho_ten: String(s.ho_ten || s.hoten || '').trim(),
-                ngay_sinh: s.ngay_sinh || s.ngaysinh || '',
-                ten_lop: cleanClassName
-              });
-            }
-          });
-        }
-
-        currentClassStudents = Array.from(studentMap.values()).sort((a, b) => a.ho_ten.localeCompare(b.ho_ten, 'vi'));
         return currentClassStudents;
 
       } catch (err) {
@@ -784,7 +741,7 @@
       } catch (e) {}
     }
 
-    // CAMERA & SCANNER QR (CÓ CẢNH BÁO MÃ KHÔNG TỒN TẠI)
+    // CAMERA & SCANNER QR (CÓ CẢNH BÁO NẾU MÃ KHÔNG TỒN TẠI)
     function startQRScanner() {
       if (html5QrcodeScanner) return;
       html5QrcodeScanner = new Html5Qrcode("reader");
@@ -844,19 +801,12 @@
 
       document.getElementById('qr-modal').classList.remove('hidden');
 
-      // Tra cứu hai bảng (hoc_sinh & danh_sach)
-      let student = null;
-      let resHS = await _supabase.from('hoc_sinh').select('*').eq('ma_hs', maHS).maybeSingle();
-      if (resHS.data) {
-        student = resHS.data;
-      } else {
-        let resDS = await _supabase.from('danh_sach').select('*').eq('ma_hs', maHS).maybeSingle();
-        if (resDS.data) student = resDS.data;
-      }
+      // Tra cứu trực tiếp bảng hoc_sinh
+      let { data: student } = await _supabase.from('hoc_sinh').select('*').eq('ma_hs', maHS).maybeSingle();
 
       if (student) {
-        document.getElementById('modal-ho-ten').innerHTML = `<strong class="text-gray-800">${student.ho_ten || student.hoten}</strong>`;
-        document.getElementById('modal-lop').innerText = student.ten_lop || student.lop || 'Chưa phân lớp';
+        document.getElementById('modal-ho-ten').innerHTML = `<strong class="text-gray-800">${student.ho_ten}</strong>`;
+        document.getElementById('modal-lop').innerText = student.ten_lop || 'Chưa phân lớp';
         confirmBtn.disabled = false;
         confirmBtn.classList.remove('opacity-50', 'cursor-not-allowed');
       } else {
