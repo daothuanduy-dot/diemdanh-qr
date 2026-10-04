@@ -303,7 +303,7 @@
     </div>
   </div>
 
-  <!-- POPUP MODAL XÁC NHẬN MÃ QR -->
+  <!-- POPUP MODAL XÁC NHẬN MÃ QR KHAI THÁC DỮ LIỆU CÓ THÔNG BÁO KHÔNG TÌM THẤY -->
   <div id="qr-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
     <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-gray-100">
       <div class="flex justify-between items-center border-b pb-3">
@@ -312,12 +312,14 @@
       </div>
       <div class="space-y-2 text-sm">
         <div class="flex justify-between border-b pb-1"><span class="text-gray-500">Mã Học Sinh:</span><strong id="modal-ma-hs" class="text-blue-600 font-mono">---</strong></div>
-        <div class="flex justify-between border-b pb-1"><span class="text-gray-500">Họ và Tên:</span><strong id="modal-ho-ten" class="text-gray-800">---</strong></div>
+        <div class="flex justify-between border-b pb-1"><span class="text-gray-500">Họ và Tên:</span><div id="modal-ho-ten" class="text-right">---</div></div>
         <div class="flex justify-between border-b pb-1"><span class="text-gray-500">Lớp / Khối:</span><strong id="modal-lop" class="text-gray-800">---</strong></div>
         <div class="flex justify-between border-b pb-1"><span class="text-gray-500">Ghi nhận:</span><strong id="modal-hinh-thuc" class="text-amber-600">---</strong></div>
       </div>
       <div class="pt-2 flex gap-3">
-        <button onclick="confirmSaveQR()" class="flex-1 bg-emerald-600 text-white py-2.5 rounded-xl font-bold hover:bg-emerald-700 shadow-md flex items-center justify-center gap-1"><i class="fa-solid fa-check"></i> LƯU THÔNG TIN</button>
+        <button id="btn-confirm-qr" onclick="confirmSaveQR()" class="flex-1 bg-emerald-600 text-white py-2.5 rounded-xl font-bold hover:bg-emerald-700 shadow-md flex items-center justify-center gap-1">
+          <i class="fa-solid fa-check"></i> LƯU THÔNG TIN
+        </button>
         <button onclick="closeQRModal()" class="flex-1 bg-gray-200 text-gray-700 py-2.5 rounded-xl font-bold hover:bg-gray-300">HỦY BỎ</button>
       </div>
     </div>
@@ -342,49 +344,53 @@
       await fetchDanhMucDiem();
     });
 
-    // 3. TẢI DANH SÁCH LỚP HỌC (SỬ DỤNG TRUY VẤN ĐA TẦNG FALLBACK)
+    // 3. TẢI TOÀN BỘ DANH SÁCH LỚP HỌC (TỪ TẤT CẢ BẢNG BẰNG GỘP SET DỮ LIỆU)
     async function fetchAllClasses() {
       try {
-        let { data, error } = await _supabase.from('lop').select('*').order('ten_lop', { ascending: true });
+        const setLop = new Set();
+        let classData = [];
 
-        if (error || !data || data.length === 0) {
-          const resHS = await _supabase.from('hoc_sinh').select('ten_lop, khoi_id').not('ten_lop', 'is', null);
-          if (resHS.data && resHS.data.length > 0) {
-            const setLop = new Set();
-            data = [];
-            resHS.data.forEach(item => {
-              const l = String(item.ten_lop || '').trim();
-              if (l && !setLop.has(l)) {
-                setLop.add(l);
-                let k = item.khoi_id || '';
-                if (!k) { const m = l.match(/^\d+/); if (m) k = m[0]; }
-                data.push({ ten_lop: l, khoi_id: k });
-              }
-            });
-          }
+        // Thử Bảng 'lop'
+        let { data: resLop } = await _supabase.from('lop').select('ten_lop, khoi_id');
+        if (resLop) {
+          resLop.forEach(item => {
+            const l = String(item.ten_lop || '').trim();
+            if (l && !setLop.has(l)) {
+              setLop.add(l);
+              classData.push({ ten_lop: l, khoi_id: String(item.khoi_id || '') });
+            }
+          });
         }
 
-        if (!data || data.length === 0) {
-          const resDS = await _supabase.from('danh_sach').select('lop, khoi').not('lop', 'is', null);
-          if (resDS.data) {
-            const setLop = new Set();
-            data = [];
-            resDS.data.forEach(item => {
-              const l = String(item.lop || '').trim();
-              if (l && !setLop.has(l)) {
-                setLop.add(l);
-                let k = item.khoi || '';
-                if (!k) { const m = l.match(/^\d+/); if (m) k = m[0]; }
-                data.push({ ten_lop: l, khoi_id: k });
-              }
-            });
-          }
+        // Thử Bảng 'hoc_sinh'
+        let { data: resHS } = await _supabase.from('hoc_sinh').select('ten_lop, khoi_id').not('ten_lop', 'is', null);
+        if (resHS) {
+          resHS.forEach(item => {
+            const l = String(item.ten_lop || '').trim();
+            if (l && !setLop.has(l)) {
+              setLop.add(l);
+              let k = String(item.khoi_id || '');
+              if (!k) { const m = l.match(/^\d+/); if (m) k = m[0]; }
+              classData.push({ ten_lop: l, khoi_id: k });
+            }
+          });
         }
 
-        allLopList = (data || []).map(item => ({
-          ten_lop: String(item.ten_lop || item.lop || '').trim(),
-          khoi_id: String(item.khoi_id || item.khoi || '').trim()
-        })).sort((a, b) => a.ten_lop.localeCompare(b.ten_lop, 'vi', { numeric: true }));
+        // Thử Bảng 'danh_sach'
+        let { data: resDS } = await _supabase.from('danh_sach').select('lop, khoi').not('lop', 'is', null);
+        if (resDS) {
+          resDS.forEach(item => {
+            const l = String(item.lop || '').trim();
+            if (l && !setLop.has(l)) {
+              setLop.add(l);
+              let k = String(item.khoi || '');
+              if (!k) { const m = l.match(/^\d+/); if (m) k = m[0]; }
+              classData.push({ ten_lop: l, khoi_id: k });
+            }
+          });
+        }
+
+        allLopList = classData.sort((a, b) => a.ten_lop.localeCompare(b.ten_lop, 'vi', { numeric: true }));
 
       } catch (err) {
         console.error("Lỗi lấy danh sách lớp:", err);
@@ -412,7 +418,7 @@
       });
     }
 
-    // 4. TẢI HỌC SINH CỦA CỦA MỘT LỚP CỤ THỂ
+    // 4. TẢI HỌC SINH THUỘC LỚP CỤ THỂ
     async function fetchStudentsByClass(className) {
       if (!className) {
         currentClassStudents = [];
@@ -421,29 +427,49 @@
 
       try {
         const cleanClassName = className.trim();
+        let studentMap = new Map();
 
-        let { data, error } = await _supabase
+        // 1. Tìm trong bảng 'hoc_sinh'
+        let { data: dataHS } = await _supabase
           .from('hoc_sinh')
           .select('*')
-          .ilike('ten_lop', cleanClassName)
-          .order('ho_ten', { ascending: true });
+          .ilike('ten_lop', cleanClassName);
 
-        if (error || !data || data.length === 0) {
-          let res = await _supabase
-            .from('danh_sach')
-            .select('*')
-            .ilike('lop', cleanClassName);
-          
-          data = res.data || [];
+        if (dataHS) {
+          dataHS.forEach(s => {
+            const m = String(s.ma_hs || s.id || '').trim();
+            if (m) {
+              studentMap.set(m, {
+                ma_hs: m,
+                ho_ten: String(s.ho_ten || '').trim(),
+                ngay_sinh: s.ngay_sinh || '',
+                ten_lop: cleanClassName
+              });
+            }
+          });
         }
 
-        currentClassStudents = data.map(item => ({
-          ma_hs: String(item.ma_hs || item.id || '').trim(),
-          ho_ten: String(item.ho_ten || item.hoten || '').trim(),
-          ngay_sinh: item.ngay_sinh || item.ngaysinh || '',
-          ten_lop: cleanClassName
-        })).sort((a, b) => a.ho_ten.localeCompare(b.ho_ten, 'vi'));
+        // 2. Tìm thêm trong bảng 'danh_sach'
+        let { data: dataDS } = await _supabase
+          .from('danh_sach')
+          .select('*')
+          .ilike('lop', cleanClassName);
 
+        if (dataDS) {
+          dataDS.forEach(s => {
+            const m = String(s.ma_hs || s.id || '').trim();
+            if (m && !studentMap.has(m)) {
+              studentMap.set(m, {
+                ma_hs: m,
+                ho_ten: String(s.ho_ten || s.hoten || '').trim(),
+                ngay_sinh: s.ngay_sinh || s.ngaysinh || '',
+                ten_lop: cleanClassName
+              });
+            }
+          });
+        }
+
+        currentClassStudents = Array.from(studentMap.values()).sort((a, b) => a.ho_ten.localeCompare(b.ho_ten, 'vi'));
         return currentClassStudents;
 
       } catch (err) {
@@ -535,7 +561,7 @@
       }
 
       if (currentClassStudents.length === 0) {
-        container.innerHTML = `<p class="text-sm text-red-500 bg-red-50 p-4 rounded-xl border text-center">Không tìm thấy học sinh nào thuộc Lớp ${lopVal}. Vui lòng kiểm tra lại CSDL.</p>`;
+        container.innerHTML = `<p class="text-sm text-red-500 bg-red-50 p-4 rounded-xl border text-center font-semibold">Không tìm thấy học sinh nào thuộc Lớp ${lopVal}. Vui lòng kiểm tra lại CSDL.</p>`;
         return;
       }
 
@@ -758,7 +784,7 @@
       } catch (e) {}
     }
 
-    // CAMERA & SCANNER QR
+    // CAMERA & SCANNER QR (CÓ CẢNH BÁO MÃ KHÔNG TỒN TẠI)
     function startQRScanner() {
       if (html5QrcodeScanner) return;
       html5QrcodeScanner = new Html5Qrcode("reader");
@@ -793,7 +819,7 @@
       return text.replace(/Mã HS:/gi, '').trim();
     }
 
-    function onQRScanned(decodedText) {
+    async function onQRScanned(decodedText) {
       if (html5QrcodeScanner) html5QrcodeScanner.pause(true);
 
       const maHS = cleanMaHS(decodedText);
@@ -808,20 +834,35 @@
       pendingQRData = { maHS, action, actionText: actionMap[action] };
 
       document.getElementById('modal-ma-hs').innerText = maHS;
-      document.getElementById('modal-ho-ten').innerText = "Đang tra cứu...";
+      document.getElementById('modal-ho-ten').innerHTML = '<span class="text-gray-400 italic">Đang tra cứu CSDL...</span>';
       document.getElementById('modal-lop').innerText = "---";
       document.getElementById('modal-hinh-thuc').innerText = actionMap[action];
 
+      const confirmBtn = document.getElementById('btn-confirm-qr');
+      confirmBtn.disabled = true;
+      confirmBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
       document.getElementById('qr-modal').classList.remove('hidden');
 
-      _supabase.from('hoc_sinh').select('*').eq('ma_hs', maHS).maybeSingle().then(res => {
-        if (res.data) {
-          document.getElementById('modal-ho-ten').innerText = res.data.ho_ten;
-          document.getElementById('modal-lop').innerText = res.data.ten_lop;
-        } else {
-          document.getElementById('modal-ho-ten').innerText = "Học sinh mới / Thẻ học sinh";
-        }
-      });
+      // Tra cứu hai bảng (hoc_sinh & danh_sach)
+      let student = null;
+      let resHS = await _supabase.from('hoc_sinh').select('*').eq('ma_hs', maHS).maybeSingle();
+      if (resHS.data) {
+        student = resHS.data;
+      } else {
+        let resDS = await _supabase.from('danh_sach').select('*').eq('ma_hs', maHS).maybeSingle();
+        if (resDS.data) student = resDS.data;
+      }
+
+      if (student) {
+        document.getElementById('modal-ho-ten').innerHTML = `<strong class="text-gray-800">${student.ho_ten || student.hoten}</strong>`;
+        document.getElementById('modal-lop').innerText = student.ten_lop || student.lop || 'Chưa phân lớp';
+        confirmBtn.disabled = false;
+        confirmBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+      } else {
+        document.getElementById('modal-ho-ten').innerHTML = `<span class="text-red-600 font-bold"><i class="fa-solid fa-triangle-exclamation"></i> Không tìm thấy học sinh trong CSDL!</span>`;
+        document.getElementById('modal-lop').innerText = 'N/A';
+      }
     }
 
     async function confirmSaveQR() {
@@ -870,12 +911,10 @@
       if (index !== 0) stopQRScanner();
     }
 
-    // --- HÀM ĐĂNG XUẤT TRIỆT ĐỂ (XÓA BỘ NHỚ VÀ ÉP TẢI TRANG MỚI) ---
     function handleLogout() {
       if (confirm("Xác nhận đăng xuất khỏi hệ thống?")) {
         localStorage.clear();
         sessionStorage.clear();
-        // Ép trình duyệt tải lại trang từ Server, bỏ qua bộ nhớ đệm (Cache)
         window.location.href = window.location.origin + window.location.pathname + '?v=' + new Date().getTime();
       }
     }
