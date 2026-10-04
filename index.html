@@ -128,7 +128,7 @@
             </select>
           </div>
           <div>
-            <label class="block text-xs font-bold text-gray-700 mb-1">Buổi ghi nhận (Tự động):</label>
+            <label class="block text-xs font-bold text-gray-700 mb-1">Buổi ghi nhận:</label>
             <select id="bv-buoi" class="w-full border p-2.5 rounded-lg text-sm bg-white font-bold text-blue-700">
               <option value="Sáng">Sáng (6h - 12h)</option>
               <option value="Chiều">Chiều (Sau 12h)</option>
@@ -184,7 +184,7 @@
             </select>
           </div>
           <div>
-            <label class="block text-xs font-bold text-gray-700 mb-1">Buổi ghi nhận (Tự động):</label>
+            <label class="block text-xs font-bold text-gray-700 mb-1">Buổi ghi nhận:</label>
             <select id="cd-buoi" class="w-full border p-2.5 rounded-lg text-sm bg-white font-bold text-blue-700">
               <option value="Sáng">Sáng (6h - 12h)</option>
               <option value="Chiều">Chiều (Sau 12h)</option>
@@ -246,7 +246,7 @@
         </button>
       </section>
 
-      <!-- TAB 3: THỐNG KÊ, XẾP HẠNG & CẢNH BÁO -->
+      <!-- TAB 3: THỐNG KÊ, XẾP HẠNG & CẢNH BÁO HOÀN THIỆN -->
       <section id="content-tab-3" class="tab-content hidden space-y-6">
         <h2 class="text-lg font-bold text-blue-800 uppercase flex items-center gap-2"><i class="fa-solid fa-chart-line"></i> 3. Báo Cáo Thống Kê, Xếp Hạng & Cảnh Báo</h2>
         
@@ -371,7 +371,7 @@
                 </tr>
               </thead>
               <tbody id="lop-rank-table-body">
-                <tr><td colspan="9" class="p-4 text-center text-gray-400 bg-gray-50">Nhấn nút "LỌC & THỐNG KÊ DỮ LIỆU" để xem bảng xếp hạng...</td></tr>
+                <tr><td colspan="9" class="p-4 text-center text-gray-400 bg-gray-50">Đang tải dữ liệu xếp hạng...</td></tr>
               </tbody>
             </table>
           </div>
@@ -400,7 +400,7 @@
                 </tr>
               </thead>
               <tbody id="hs-rank-table-body">
-                <tr><td colspan="10" class="p-4 text-center text-gray-400 bg-gray-50">Nhấn nút "LỌC & THỐNG KÊ DỮ LIỆU" để xem danh sách...</td></tr>
+                <tr><td colspan="10" class="p-4 text-center text-gray-400 bg-gray-50">Đang tải dữ liệu danh sách...</td></tr>
               </tbody>
             </table>
           </div>
@@ -586,7 +586,6 @@
     let pendingQRData = null;
 
     // HÀM TỰ ĐỘNG XÁC ĐỊNH BUỔI DỰA VÀO GIỜ HỆ THỐNG
-    // Từ 6h00 đến 12h00 -> 'Sáng', Từ 12h01 trở đi -> 'Chiều'
     function getCurrentBuoi() {
       const now = new Date();
       const hours = now.getHours();
@@ -598,11 +597,25 @@
       return 'Chiều';
     }
 
+    // HELPER TẠO NGÀY KHÔNG BỊ BỎ SÓT LỆCH MÚI GIỜ
+    function parseLocalDateStr(dateStr) {
+      if (!dateStr) return new Date();
+      const parts = dateStr.split('-');
+      if (parts.length < 3) return new Date();
+      return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 0, 0, 0);
+    }
+
+    function formatDateToYYYYMMDD(d) {
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
     // 2. KHỞI TẠO TỰ ĐỘNG
     document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById('tk-date-tuan').valueAsDate = new Date();
       
-      // Tự động set buổi cho các ô chọn
       const currentBuoi = getCurrentBuoi();
       if(document.getElementById('bv-buoi')) document.getElementById('bv-buoi').value = currentBuoi;
       if(document.getElementById('cd-buoi')) document.getElementById('cd-buoi').value = currentBuoi;
@@ -674,8 +687,7 @@
       });
     }
 
-    // 4. LƯU DỮ LIỆU ĐẦY ĐỦ VÀ TỰ ĐỘNG TÍNH BUỔI
-    // --- LƯU QUÉT MÃ QR ---
+    // 4. LƯU DỮ LIỆU CSDL ĐẦY ĐỦ
     async function confirmSaveQR() {
       if (!pendingQRData) return;
       const { maHS, action, actionText } = pendingQRData;
@@ -697,7 +709,7 @@
       else if (action === 'diem_thuong') { diemVal = 1.0; maHDVal = 'KT01'; }
       else if (action === 'diem_tru') { diemVal = -1.0; maHDVal = 'VP01'; }
 
-      const autoBuoi = getCurrentBuoi(); // Tự động lấy buổi hiện tại theo giờ hệ thống
+      const autoBuoi = getCurrentBuoi();
 
       try {
         const { error } = await _supabase.from('diem_danh_master').insert([{
@@ -705,7 +717,7 @@
           ho_ten: hoTen,
           khoi: String(khoi),
           lop: lop,
-          ngay_diem_danh: new Date().toISOString().split('T')[0],
+          ngay_diem_danh: formatDateToYYYYMMDD(new Date()),
           buoi: autoBuoi,
           trang_thai: action,
           ma_hd: maHDVal,
@@ -730,7 +742,6 @@
       closeQRModal();
     }
 
-    // --- LƯU BÁO VẮNG ---
     async function submitBaoVang() {
       const lop = document.getElementById('bv-lop').value;
       const buoiVal = document.getElementById('bv-buoi').value || getCurrentBuoi();
@@ -761,7 +772,7 @@
           ho_ten: hoTen,
           khoi: String(khoi),
           lop: lop,
-          ngay_diem_danh: new Date().toISOString().split('T')[0],
+          ngay_diem_danh: formatDateToYYYYMMDD(new Date()),
           buoi: buoiVal,
           trang_thai: isCoPhep ? 'vang_co_phep' : 'vang_khong_phep',
           ma_hd: isCoPhep ? 'HD03a' : 'HD03b',
@@ -782,7 +793,6 @@
       } catch (e) { alert("Lỗi lưu CSDL: " + e.message); }
     }
 
-    // --- LƯU CHẤM ĐIỂM THI ĐUA ---
     async function submitChamDiem() {
       const lop = document.getElementById('cd-lop').value;
       const doiTuong = document.getElementById('cd-hocsinh').value;
@@ -831,7 +841,7 @@
           ho_ten: hoTen,
           khoi: String(khoi),
           lop: lop,
-          ngay_diem_danh: new Date().toISOString().split('T')[0],
+          ngay_diem_danh: formatDateToYYYYMMDD(new Date()),
           buoi: buoiVal,
           trang_thai: loaiDiem === 'cong' ? 'diem_thuong' : 'diem_tru',
           ma_hd: maHD,
@@ -850,7 +860,7 @@
       } catch (e) { alert("Lỗi lưu CSDL: " + e.message); }
     }
 
-    // 5. BỘ THỐNG KÊ VÀ BẢNG POPUP CHI TIẾT
+    // 5. NÂNG CẤP TOÀN BỘ BỘ THỐNG KÊ VÀ BẢNG POPUP CHI TIẾT
     function onThongKeScopeChange() {
       const scope = document.getElementById('tk-doituong').value;
       document.getElementById('box-tk-khoi').classList.toggle('hidden', scope === 'toan_truong');
@@ -870,16 +880,16 @@
       let start = '', end = '', label = '';
 
       if (timeType === 'tuan') {
-        const dateInput = document.getElementById('tk-date-tuan').value || new Date().toISOString().split('T')[0];
-        const d = new Date(dateInput);
+        const dateInputStr = document.getElementById('tk-date-tuan').value || formatDateToYYYYMMDD(new Date());
+        const d = parseLocalDateStr(dateInputStr);
         const day = d.getDay();
-        const diffMon = d.getDate() - day + (day === 0 ? -6 : 1);
-        const mon = new Date(d.setDate(diffMon));
-        const sun = new Date(mon);
-        sun.setDate(mon.getDate() + 6);
+        const diffMon = (day === 0 ? -6 : 1 - day);
+        
+        const mon = new Date(d.getFullYear(), d.getMonth(), d.getDate() + diffMon);
+        const sun = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6);
 
-        start = mon.toISOString().split('T')[0];
-        end = sun.toISOString().split('T')[0];
+        start = formatDateToYYYYMMDD(mon);
+        end = formatDateToYYYYMMDD(sun);
         label = `Tuần từ ${mon.toLocaleDateString('vi-VN')} đến ${sun.toLocaleDateString('vi-VN')}`;
 
       } else if (timeType === 'thang') {
@@ -919,35 +929,41 @@
 
       document.getElementById('time-scope-banner').innerText = `Đang xem thống kê: ${timeRange.label}`;
 
-      let query = _supabase.from('diem_danh_master').select('*');
-      if (timeRange.start) query = query.gte('ngay_diem_danh', timeRange.start);
-      if (timeRange.end) query = query.lte('ngay_diem_danh', timeRange.end);
-
-      const { data: rawMasterData, error } = await query;
+      // LẤY TẤT CẢ DỮ LIỆU ĐỂ LỌC TRỰC TIẾP TRÊN CLIENT TRÁNH BỊ LỖI CHUỖI CSDL SUPABASE
+      const { data: rawMasterData, error } = await _supabase.from('diem_danh_master').select('*');
       if (error) return alert("Lỗi truy vấn CSDL: " + error.message);
 
-      activeFilteredMasterRecords = rawMasterData || [];
+      const allRecords = rawMasterData || [];
+
+      // LỌC CHUẨN KHOẢNG NGÀY
+      activeFilteredMasterRecords = allRecords.filter(r => {
+        const rDate = r.ngay_diem_danh ? String(r.ngay_diem_danh).substring(0, 10) : '';
+        if (timeRange.start && rDate < timeRange.start) return false;
+        if (timeRange.end && rDate > timeRange.end) return false;
+        return true;
+      });
 
       let filteredRecords = activeFilteredMasterRecords;
       if (scope === 'theo_lop' && lopVal) {
-        filteredRecords = activeFilteredMasterRecords.filter(r => String(r.lop) === lopVal);
+        filteredRecords = activeFilteredMasterRecords.filter(r => String(r.lop).trim() === lopVal.trim());
       } else if (scope === 'theo_khoi' && khoiVal) {
         filteredRecords = activeFilteredMasterRecords.filter(r => String(r.khoi) === khoiVal || (r.lop && r.lop.startsWith(khoiVal)));
       }
 
+      // TÍNH BẢNG TỔNG THỐNG KÊ
       let totalVP = 0, totalCong = 0, totalTru = 0, totalVang = 0;
       filteredRecords.forEach(r => {
         const diem = parseFloat(r.diem) || 0;
         const trangThai = String(r.trang_thai || '').toLowerCase();
         if (diem > 0 || trangThai === 'diem_thuong') totalCong += diem > 0 ? diem : 1;
-        if (diem < 0 || trangThai === 'diem_tru') totalTru += diem < 0 ? diem : -1;
+        if (diem < 0 || trangThai === 'diem_tru') totalTru += diem < 0 ? Math.abs(diem) : 1;
         if (trangThai.includes('muon') || trangThai === 'diem_tru') totalVP += 1;
         if (trangThai.includes('vang')) totalVang += 1;
       });
 
       document.getElementById('tk-stat-tong-vp').innerText = totalVP;
       document.getElementById('tk-stat-tong-cong').innerText = `+${totalCong}`;
-      document.getElementById('tk-stat-tong-tru').innerText = `${totalTru}`;
+      document.getElementById('tk-stat-tong-tru').innerText = `-${totalTru}`;
       document.getElementById('tk-stat-tong-vang').innerText = totalVang;
 
       renderClassRanking(filteredRecords, scope, khoiVal, lopVal);
@@ -955,23 +971,26 @@
       renderWarningList(filteredRecords, scope, khoiVal, lopVal);
     }
 
+    // XẾP HẠNG THI ĐUA LỚP (TỪ CAO XUỐNG THẤP)
     function renderClassRanking(records, scope, khoiVal, lopVal) {
       let targetClasses = allLopList;
       if (scope === 'theo_lop' && lopVal) targetClasses = allLopList.filter(l => l.ten_lop === lopVal);
       else if (scope === 'theo_khoi' && khoiVal) targetClasses = allLopList.filter(l => String(l.khoi_id) === khoiVal || l.ten_lop.startsWith(khoiVal));
 
+      if (targetClasses.length === 0 && allLopList.length > 0) targetClasses = allLopList;
+
       const classStats = targetClasses.map(c => {
         const cLop = c.ten_lop;
-        const cRecords = records.filter(r => String(r.lop) === cLop || r.ma_hs === `LOP_${cLop}`);
+        const cRecords = records.filter(r => String(r.lop).trim() === cLop || r.ma_hs === `LOP_${cLop}`);
 
         let cong = 0, tru = 0;
         cRecords.forEach(r => {
           const d = parseFloat(r.diem) || 0;
           if (d > 0) cong += d;
-          if (d < 0) tru += d;
+          if (d < 0) tru += Math.abs(d);
         });
 
-        const tongDiem = 100 + cong + tru;
+        const tongDiem = 100 + cong - tru;
         let xepLoai = 'Lớp Xuất Sắc';
         if (tongDiem < 80) xepLoai = 'Lớp Cần Cố Gắng';
         else if (tongDiem < 90) xepLoai = 'Lớp Khá';
@@ -985,6 +1004,11 @@
       const tbody = document.getElementById('lop-rank-table-body');
       tbody.innerHTML = '';
 
+      if (classStats.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="p-4 text-center text-gray-400">Không tìm thấy dữ liệu các lớp.</td></tr>';
+        return;
+      }
+
       classStats.forEach((cs, index) => {
         const badgeColor = cs.tongDiem >= 100 ? 'text-emerald-600 font-bold' : (cs.tongDiem >= 90 ? 'text-blue-600 font-bold' : 'text-red-600 font-bold');
         tbody.innerHTML += `
@@ -994,15 +1018,16 @@
             <td class="p-2.5 text-center">${cs.khoi}</td>
             <td class="p-2.5 text-center text-gray-500">100</td>
             <td class="p-2.5 text-center font-bold text-green-600">+${cs.cong}</td>
-            <td class="p-2.5 text-center font-bold text-red-600">${cs.tru}</td>
+            <td class="p-2.5 text-center font-bold text-red-600">-${cs.tru}</td>
             <td class="p-2.5 text-center font-bold text-base ${badgeColor}">${cs.tongDiem}đ</td>
             <td class="p-2.5 text-center text-xs font-semibold text-amber-700"><i class="fa-solid fa-award"></i> ${cs.xepLoai}</td>
-            <td class="p-2.5 text-center"><button class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-bold hover:bg-blue-200">Xem Chi Tiết</button></td>
+            <td class="p-2.5 text-center"><button class="bg-blue-100 text-blue-700 px-2.5 py-1 rounded text-xs font-bold hover:bg-blue-200">Xem Chi Tiết</button></td>
           </tr>
         `;
       });
     }
 
+    // XẾP HẠNG HỌC SINH (TỪ CAO XUỐNG THẤP)
     function renderStudentRanking(records, scope, khoiVal, lopVal) {
       let targetStudents = allStudentsList;
       if (scope === 'theo_lop' && lopVal) targetStudents = allStudentsList.filter(s => s.ten_lop === lopVal);
@@ -1017,12 +1042,12 @@
           const d = parseFloat(r.diem) || 0;
           const st = String(r.trang_thai || '').toLowerCase();
           if (d > 0) cong += d;
-          if (d < 0) tru += d;
+          if (d < 0) tru += Math.abs(d);
           if (st.includes('vang')) soVang += 1;
           if (st.includes('muon') || st === 'diem_tru') soVP += 1;
         });
 
-        const tongDiem = 100 + cong + tru;
+        const tongDiem = 100 + cong - tru;
         return { ma_hs: mHS, ho_ten: s.ho_ten, ten_lop: s.ten_lop, soVang, soVP, cong, tru, tongDiem };
       });
 
@@ -1030,6 +1055,11 @@
 
       const tbody = document.getElementById('hs-rank-table-body');
       tbody.innerHTML = '';
+
+      if (studentStats.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" class="p-4 text-center text-gray-400">Chưa có danh sách học sinh.</td></tr>';
+        return;
+      }
 
       studentStats.forEach((st, index) => {
         tbody.innerHTML += `
@@ -1041,14 +1071,15 @@
             <td class="p-2.5 text-center font-bold ${st.soVang > 0 ? 'text-red-600' : 'text-gray-400'}">${st.soVang} buổi</td>
             <td class="p-2.5 text-center font-bold ${st.soVP > 0 ? 'text-amber-600' : 'text-gray-400'}">${st.soVP} lần</td>
             <td class="p-2.5 text-center font-bold text-green-600">+${st.cong}</td>
-            <td class="p-2.5 text-center font-bold text-red-600">${st.tru}</td>
+            <td class="p-2.5 text-center font-bold text-red-600">-${st.tru}</td>
             <td class="p-2.5 text-center font-bold text-emerald-700">${st.tongDiem}đ</td>
-            <td class="p-2.5 text-center"><button class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-xs font-bold hover:bg-emerald-200">Chi Tiết</button></td>
+            <td class="p-2.5 text-center"><button class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded text-xs font-bold hover:bg-emerald-200">Chi Tiết</button></td>
           </tr>
         `;
       });
     }
 
+    // BẢNG CẢNH BÁO HỌC SINH
     function renderWarningList(records, scope, khoiVal, lopVal) {
       let targetStudents = allStudentsList;
       if (scope === 'theo_lop' && lopVal) targetStudents = allStudentsList.filter(s => s.ten_lop === lopVal);
@@ -1065,7 +1096,7 @@
           if (st.includes('muon') || st === 'diem_tru') soVP += 1;
         });
 
-        if (soVang >= 2 || soVP >= 2) {
+        if (soVang >= 1 || soVP >= 1) {
           warningList.push({ ma_hs: mHS, ho_ten: s.ho_ten, ten_lop: s.ten_lop, soVang, soVP });
         }
       });
@@ -1082,7 +1113,7 @@
 
       warningList.forEach(st => {
         let badge = '<span class="bg-amber-500 text-white text-xs px-2.5 py-1 rounded-full font-bold">CẦN LƯU Ý</span>';
-        if (st.soVang >= 4 || st.soVP >= 4) badge = '<span class="bg-red-600 text-white text-xs px-2.5 py-1 rounded-full font-bold">CẢNH BÁO ĐỎ</span>';
+        if (st.soVang >= 3 || st.soVP >= 3) badge = '<span class="bg-red-600 text-white text-xs px-2.5 py-1 rounded-full font-bold">CẢNH BÁO ĐỎ</span>';
 
         tbody.innerHTML += `
           <tr class="border-b clickable-row hover:bg-red-50" onclick="openDrilldownModal('HOCSINH', '${st.ma_hs}', '${st.ho_ten}', '${st.ten_lop}')">
@@ -1092,13 +1123,13 @@
             <td class="p-2.5 text-center font-bold text-red-600">${st.soVang} buổi</td>
             <td class="p-2.5 text-center font-bold text-amber-600">${st.soVP} lần</td>
             <td class="p-2.5 text-center">${badge}</td>
-            <td class="p-2.5 text-center"><button class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-bold hover:bg-red-200">Chi Tiết</button></td>
+            <td class="p-2.5 text-center"><button class="bg-red-100 text-red-700 px-2.5 py-1 rounded text-xs font-bold hover:bg-red-200">Chi Tiết</button></td>
           </tr>
         `;
       });
     }
 
-    // 6. POPUP XEM CHI TIẾT
+    // 6. POPUP XEM CHI TIẾT LỊCH SỬ ĐIỂM CỘNG TRỪ
     function openDrilldownModal(type, targetId, extraName = '', extraLop = '') {
       const modal = document.getElementById('modal-drilldown-detail');
       const title = document.getElementById('modal-detail-title');
@@ -1110,7 +1141,7 @@
       if (type === 'LOP') {
         title.innerHTML = `<i class="fa-solid fa-users text-blue-600"></i> Chi Tiết Điểm Thi Đua - Lớp ${targetId}`;
         subtitle.innerText = `Phạm vi: ${currentActiveTimeRange.label || 'Tất cả thời gian'}`;
-        matchedRecords = activeFilteredMasterRecords.filter(r => String(r.lop) === targetId || r.ma_hs === `LOP_${targetId}`);
+        matchedRecords = activeFilteredMasterRecords.filter(r => String(r.lop).trim() === String(targetId).trim() || r.ma_hs === `LOP_${targetId}`);
       } else {
         title.innerHTML = `<i class="fa-solid fa-user text-emerald-600"></i> Chi Tiết Lịch Sử Điểm - Học Sinh: ${extraName}`;
         subtitle.innerText = `Mã HS: ${targetId} | Lớp: ${extraLop} | Phạm vi: ${currentActiveTimeRange.label || 'Tất cả thời gian'}`;
@@ -1128,7 +1159,7 @@
         matchedRecords.forEach((r, idx) => {
           const diemNum = parseFloat(r.diem) || 0;
           if (diemNum > 0) totalCong += diemNum;
-          if (diemNum < 0) totalTru += diemNum;
+          if (diemNum < 0) totalTru += Math.abs(diemNum);
 
           const dBadge = diemNum > 0 
             ? `<span class="bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded">+${diemNum}đ</span>`
@@ -1150,7 +1181,7 @@
       }
 
       document.getElementById('modal-stat-cong').innerText = `+${totalCong}đ`;
-      document.getElementById('modal-stat-tru').innerText = `${totalTru}đ`;
+      document.getElementById('modal-stat-tru').innerText = `-${totalTru}đ`;
       document.getElementById('modal-stat-luot').innerText = `${matchedRecords.length} lần`;
 
       modal.classList.remove('hidden');
