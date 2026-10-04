@@ -134,7 +134,7 @@
         <div class="space-y-3">
           <label class="block font-bold text-gray-700 text-sm flex justify-between items-center">
             <span>Danh sách chi tiết học sinh vắng:</span>
-            <span id="bv-student-count" class="text-xs font-normal text-gray-500"></span>
+            <span id="bv-student-count" class="text-xs font-semibold text-blue-600"></span>
           </label>
           <div id="bv-student-rows" class="space-y-3">
             <p class="text-sm text-gray-400 italic bg-gray-50 p-4 rounded-xl border text-center">Vui lòng chọn Lớp để chọn danh sách học sinh vắng.</p>
@@ -293,27 +293,25 @@
     const SUPABASE_KEY = "sb_publishable_5imLFI2Ey7Gi3mOfp2brFg_3zBU_pOZ";
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    let allLopList = []; // Danh sách Lớp
-    let currentClassStudents = []; // Danh sách học sinh của Lớp đang được chọn
+    let allLopList = []; 
+    let currentClassStudents = []; 
     let currentUser = { ho_ten: "Đào Thuận Duy", vai_tro: "Admin" };
     let html5QrcodeScanner = null;
     let pendingQRData = null;
 
-    // 2. KHỞI TẠO TỰ ĐỘNG KHI TẢI TRANG
+    // 2. KHỞI TẠO TỰ ĐỘNG
     document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById('tk-ngay').valueAsDate = new Date();
       await fetchAllClasses();
       await fetchDanhMucDiem();
     });
 
-    // 3. TẢI TOÀN BỘ DANH SÁCH LỚP HỌC (Nhanh & Nhẹ)
+    // 3. TẢI DANH SÁCH LỚP HỌC (TỰ ĐỘNG CHUYỂN BẢNG DỰ PHÒNG NẾU CẦN)
     async function fetchAllClasses() {
       try {
-        // Thử lấy từ bảng chuẩn hóa 'lop'
         let { data, error } = await _supabase.from('lop').select('*').order('ten_lop', { ascending: true });
 
         if (error || !data || data.length === 0) {
-          // Fallback: Lấy từ bảng 'danh_sach' cũ
           const res = await _supabase.from('danh_sach').select('lop, khoi').not('lop', 'is', null);
           if (res.data) {
             const setLop = new Set();
@@ -344,7 +342,6 @@
       populateLopDropdown('tk-khoi', 'tk-lop');
     }
 
-    // Đổ danh sách Lớp vào Dropdown theo Khối được chọn
     function populateLopDropdown(khoiSelectId, lopSelectId) {
       const khoiVal = document.getElementById(khoiSelectId) ? document.getElementById(khoiSelectId).value : '';
       const lopSelect = document.getElementById(lopSelectId);
@@ -362,7 +359,7 @@
       });
     }
 
-    // 4. TẢI HỌC SINH CỦA MỘT LỚP CỤ THỂ (Tối ưu tốc độ, hiển thị 100% không lo quá tải)
+    // 4. TẢI TOÀN BỘ HỌC SINH CỦA CỦA MỘT LỚP CỤ THỂ
     async function fetchStudentsByClass(className) {
       if (!className) {
         currentClassStudents = [];
@@ -370,7 +367,6 @@
       }
 
       try {
-        // Thử lấy từ bảng 'hoc_sinh'
         let { data, error } = await _supabase
           .from('hoc_sinh')
           .select('*')
@@ -378,7 +374,6 @@
           .order('ho_ten', { ascending: true });
 
         if (error || !data || data.length === 0) {
-          // Fallback lấy từ bảng 'danh_sach'
           let res = await _supabase
             .from('danh_sach')
             .select('*')
@@ -413,7 +408,7 @@
       const countLabel = document.getElementById('bv-student-count');
       
       if (lopVal) {
-        countLabel.innerText = "Đang tải danh sách học sinh...";
+        countLabel.innerText = "Đang tải học sinh...";
         await fetchStudentsByClass(lopVal);
         countLabel.innerText = `Sĩ số: ${currentClassStudents.length} học sinh`;
       } else {
@@ -467,7 +462,6 @@
       updateBaoVangDropdowns();
     }
 
-    // Tự động Khóa / Ẩn Học sinh đã được chọn ở các hàng khác để tránh chọn trùng
     function updateBaoVangDropdowns() {
       const selects = document.querySelectorAll('.bv-student-select');
       if (selects.length === 0) return;
@@ -717,7 +711,6 @@
 
       document.getElementById('qr-modal').classList.remove('hidden');
 
-      // Tra cứu nhanh tên học sinh
       _supabase.from('hoc_sinh').select('*').eq('ma_hs', maHS).maybeSingle().then(res => {
         if (res.data) {
           document.getElementById('modal-ho-ten').innerText = res.data.ho_ten;
