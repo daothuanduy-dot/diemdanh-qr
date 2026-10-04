@@ -32,7 +32,7 @@
         </div>
       </div>
       <div class="flex gap-2">
-        <button class="btn-warning font-semibold text-sm px-3 py-2 rounded-lg flex items-center gap-1 shadow-sm hover:opacity-90">
+        <button onclick="openTuanHocTotModal()" class="btn-warning font-semibold text-sm px-3 py-2 rounded-lg flex items-center gap-1 shadow-sm hover:opacity-90">
           <i class="fa-solid fa-star"></i> Thiết Lập Tuần Học Tốt
         </button>
         <button onclick="handleLogout()" class="border border-red-500 text-red-500 text-sm px-3 py-2 rounded-lg font-semibold hover:bg-red-50">
@@ -267,6 +267,42 @@
     </main>
   </div>
 
+  <!-- POPUP MODAL THIẾT LẬP TUẦN HỌC TỐT -->
+  <div id="tuan-hoc-tot-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-gray-100">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 class="text-lg font-bold text-amber-600 flex items-center gap-2">
+          <i class="fa-solid fa-star text-amber-500"></i> Thiết Lập Tuần Học Tốt
+        </h3>
+        <button onclick="closeTuanHocTotModal()" class="text-gray-400 hover:text-red-500 font-bold text-lg">&times;</button>
+      </div>
+      <div class="space-y-3 text-sm">
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1">Chọn Lớp Đăng Ký:</label>
+          <select id="tht-lop" class="w-full border p-2.5 rounded-lg text-sm bg-white font-medium text-gray-800 focus:ring-2 focus:ring-amber-400 outline-none">
+            <option value="">-- Chọn Lớp --</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1">Ngày Bắt Đầu:</label>
+          <input type="date" id="tht-ngay-bat-dau" class="w-full border p-2.5 rounded-lg text-sm text-gray-800">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1">Ngày Kết Thúc:</label>
+          <input type="date" id="tht-ngay-ket-thuc" class="w-full border p-2.5 rounded-lg text-sm text-gray-800">
+        </div>
+      </div>
+      <div class="pt-2 flex gap-3">
+        <button onclick="submitTuanHocTot()" class="flex-1 bg-amber-500 text-white py-2.5 rounded-xl font-bold hover:bg-amber-600 shadow-md flex items-center justify-center gap-1">
+          <i class="fa-solid fa-floppy-disk"></i> LƯU ĐĂNG KÝ
+        </button>
+        <button onclick="closeTuanHocTotModal()" class="flex-1 bg-gray-200 text-gray-700 py-2.5 rounded-xl font-bold hover:bg-gray-300">
+          HỦY BỎ
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- POPUP MODAL XÁC NHẬN MÃ QR -->
   <div id="qr-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
     <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-gray-100">
@@ -309,10 +345,8 @@
     // 3. TẢI DANH SÁCH LỚP HỌC (SỬ DỤNG TRUY VẤN ĐA TẦNG FALLBACK)
     async function fetchAllClasses() {
       try {
-        // Tầng 1: Lấy từ bảng chuẩn hóa 'lop'
         let { data, error } = await _supabase.from('lop').select('*').order('ten_lop', { ascending: true });
 
-        // Tầng 2: Nếu bảng 'lop' trống, lấy từ bảng 'hoc_sinh'
         if (error || !data || data.length === 0) {
           const resHS = await _supabase.from('hoc_sinh').select('ten_lop, khoi_id').not('ten_lop', 'is', null);
           if (resHS.data && resHS.data.length > 0) {
@@ -330,7 +364,6 @@
           }
         }
 
-        // Tầng 3: Nếu vẫn trống, lấy từ bảng 'danh_sach'
         if (!data || data.length === 0) {
           const resDS = await _supabase.from('danh_sach').select('lop, khoi').not('lop', 'is', null);
           if (resDS.data) {
@@ -379,7 +412,7 @@
       });
     }
 
-    // 4. TẢI HỌC SINH CỦA CỦA MỘT LỚP CỤ THỂ (DÙNG ILIKE ĐỂ BỎ QUA VIẾT HOA/THƯỜNG VÀ KHOẢNG TRẮNG)
+    // 4. TẢI HỌC SINH CỦA CỦA MỘT LỚP CỤ THỂ
     async function fetchStudentsByClass(className) {
       if (!className) {
         currentClassStudents = [];
@@ -389,14 +422,12 @@
       try {
         const cleanClassName = className.trim();
 
-        // Tìm trong bảng 'hoc_sinh'
         let { data, error } = await _supabase
           .from('hoc_sinh')
           .select('*')
           .ilike('ten_lop', cleanClassName)
           .order('ho_ten', { ascending: true });
 
-        // Nếu trống, tìm tiếp trong bảng 'danh_sach'
         if (error || !data || data.length === 0) {
           let res = await _supabase
             .from('danh_sach')
@@ -418,6 +449,54 @@
       } catch (err) {
         console.error("Lỗi lấy học sinh theo lớp:", err);
         return [];
+      }
+    }
+
+    // --- TÍNH NĂNG THIẾT LẬP TUẦN HỌC TỐT ---
+    function openTuanHocTotModal() {
+      const lopSelect = document.getElementById('tht-lop');
+      lopSelect.innerHTML = '<option value="">-- Chọn Lớp --</option>';
+      
+      allLopList.forEach(item => {
+        lopSelect.innerHTML += `<option value="${item.ten_lop}">${item.ten_lop}</option>`;
+      });
+
+      const today = new Date();
+      const nextWeek = new Date(today);
+      nextWeek.setDate(today.getDate() + 6);
+
+      document.getElementById('tht-ngay-bat-dau').valueAsDate = today;
+      document.getElementById('tht-ngay-ket-thuc').valueAsDate = nextWeek;
+
+      document.getElementById('tuan-hoc-tot-modal').classList.remove('hidden');
+    }
+
+    function closeTuanHocTotModal() {
+      document.getElementById('tuan-hoc-tot-modal').classList.add('hidden');
+    }
+
+    async function submitTuanHocTot() {
+      const lop = document.getElementById('tht-lop').value;
+      const ngayBatDau = document.getElementById('tht-ngay-bat-dau').value;
+      const ngayKetThuc = document.getElementById('tht-ngay-ket-thuc').value;
+
+      if (!lop) return alert("Vui lòng chọn Lớp đăng ký Tuần Học Tốt!");
+      if (!ngayBatDau || !ngayKetThuc) return alert("Vui lòng chọn ngày bắt đầu và ngày kết thúc!");
+
+      try {
+        const { error } = await _supabase.from('dang_ky_tuan_hoc_tot').insert([{
+          lop: lop,
+          ngay_bat_dau: ngayBatDau,
+          ngay_ket_thuc: ngayKetThuc,
+          nguoi_dang_ky: currentUser.ho_ten
+        }]);
+
+        if (error) throw error;
+
+        alert(`Đã thiết lập Tuần Học Tốt thành công cho Lớp ${lop}!`);
+        closeTuanHocTotModal();
+      } catch (err) {
+        alert("Lỗi khi lưu thông tin Tuần Học Tốt: " + err.message);
       }
     }
 
@@ -791,8 +870,14 @@
       if (index !== 0) stopQRScanner();
     }
 
+    // --- HÀM ĐĂNG XUẤT TRIỆT ĐỂ (XÓA BỘ NHỚ VÀ ÉP TẢI TRANG MỚI) ---
     function handleLogout() {
-      if (confirm("Xác nhận đăng xuất?")) location.reload();
+      if (confirm("Xác nhận đăng xuất khỏi hệ thống?")) {
+        localStorage.clear();
+        sessionStorage.clear();
+        // Ép trình duyệt tải lại trang từ Server, bỏ qua bộ nhớ đệm (Cache)
+        window.location.href = window.location.origin + window.location.pathname + '?v=' + new Date().getTime();
+      }
     }
   </script>
 </body>
