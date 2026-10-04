@@ -250,7 +250,7 @@
             </div>
             <div id="box-tk-khoi" class="hidden">
               <label class="block text-xs font-bold text-gray-700 mb-1">Chọn Khối:</label>
-              <select id="tk-khoi" onchange="onThongKeKhoiChange()" class="w-full border p-2 rounded-lg text-sm bg-white">
+              <select id="tk-khoi" class="w-full border p-2 rounded-lg text-sm bg-white">
                 <option value="10">Khối 10</option>
                 <option value="11">Khối 11</option>
                 <option value="12">Khối 12</option>
@@ -365,11 +365,11 @@
           </div>
         </div>
 
-        <!-- BẢNG XẾP HẠNG HỌC SINH -->
+        <!-- BẢNG XẾP HẠNG TOP 20 HỌC SINH -->
         <div id="box-table-hs-rank" class="space-y-2">
           <h3 class="font-bold text-emerald-800 text-sm uppercase flex items-center justify-between">
-            <span><i class="fa-solid fa-graduation-cap text-emerald-600"></i> Bảng Thống Kê & Xếp Hạng Học Sinh</span>
-            <span class="text-xs font-normal text-gray-500 italic">(Nhấn vào Học Sinh để xem chi tiết)</span>
+            <span><i class="fa-solid fa-graduation-cap text-emerald-600"></i> Bảng Thống Kê & Xếp Hạng TOP 20 Học Sinh Xuất Sắc</span>
+            <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">(Lấy 20 học sinh cao nhất)</span>
           </h3>
           <div class="overflow-x-auto border rounded-xl shadow-sm max-h-[360px] overflow-y-auto">
             <table class="w-full text-sm text-left">
@@ -591,7 +591,7 @@
               <div>Lớp hiện tại: <strong id="move-info-cur-lop" class="text-amber-700">---</strong></div>
             </div>
             <div>
-              <label class="block text-xs font-bold text-gray-700 mb-1">3. Chọn Lớp Mới Muốn Chuyển Đốn:</label>
+              <label class="block text-xs font-bold text-gray-700 mb-1">3. Chọn Lớp Mới Muốn Chuyển Đến:</label>
               <select id="admin-move-target-lop" class="w-full border p-2.5 rounded-lg bg-white font-medium text-gray-800">
                 <option value="">-- Chọn Lớp Mới --</option>
               </select>
@@ -759,7 +759,6 @@
     let html5QrcodeScanner = null;
     let pendingQRData = null;
 
-    // TỰ ĐỘNG TÍNH BUỔI DỰA THEO THỜI GIAN THỰC GHI NHẬN
     function getCurrentBuoi() {
       const hours = new Date().getHours();
       return hours < 12 ? 'Sáng' : 'Chiều';
@@ -826,7 +825,6 @@
         populateLopDropdown('cd-khoi', 'cd-lop');
         populateLopDropdown('tk-khoi', 'tk-lop');
         
-        // Populate Admin dropdowns
         const admLop1 = document.getElementById('admin-edit-lop');
         const admLop2 = document.getElementById('admin-move-target-lop');
         if (admLop1) {
@@ -873,7 +871,7 @@
       });
     }
 
-    // 4. QUÉT MÃ QR THÔNG MINH (CẬP NHẬT TỪ VẮNG -> ĐI MUỘN NẾU ĐÃ CÓ BẢN GHI VẮNG)
+    // 4. QUÉT MÃ QR THÔNG MINH
     async function confirmSaveQR() {
       if (!pendingQRData) return;
       const { maHS, action, actionText } = pendingQRData;
@@ -900,16 +898,14 @@
       const nowTimeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
       try {
-        // TÌM XEM HỌC SINH CÓ BẢN GHI VẮNG HÔM NAY CHƯA
         const { data: existingRecords } = await _supabase.from('diem_danh_master')
-          .select('*')
+          .select('id, trang_thai')
           .eq('ma_hs', maHS)
           .eq('ngay_diem_danh', todayStr);
 
         const vangRecord = existingRecords ? existingRecords.find(r => String(r.trang_thai || '').toLowerCase().includes('vang')) : null;
 
         if (vangRecord) {
-          // CẬP NHẬT BẢN GHI VẮNG SANG ĐI MUỘN
           const updatedNote = `[Chuyển từ VẮNG -> ĐI MUỘN lúc ${nowTimeStr}] ${actionText}`;
           const { error: updateErr } = await _supabase.from('diem_danh_master').update({
             trang_thai: action,
@@ -921,11 +917,9 @@
           }).eq('id', vangRecord.id);
 
           if (updateErr) throw updateErr;
-
           alert(`Học sinh ${hoTen} trước đó báo VẮNG. Đã tự động cập nhật lại thành ĐI MUỘN lúc ${nowTimeStr}!`);
 
         } else {
-          // TẠO BẢN GHI MỚI
           const { error: insertErr } = await _supabase.from('diem_danh_master').insert([{
             ma_hs: maHS,
             ho_ten: hoTen,
@@ -1074,7 +1068,7 @@
       } catch (e) { alert("Lỗi lưu CSDL: " + e.message); }
     }
 
-    // 5. TỐI ƯU HÓA TRUY VẤN THỐNG KÊ (LỌC TRỰC TIẾP TRÊN SUPABASE CHỐNG ĐƠ TRANG)
+    // 5. BỘ THỐNG KÊ TỐI ƯU SIÊU TỐC - CHỈ LẤY CỘT CẦN THIẾT
     function onThongKeScopeChange() {
       const scope = document.getElementById('tk-doituong').value;
       document.getElementById('box-tk-khoi').classList.toggle('hidden', scope === 'toan_truong');
@@ -1142,8 +1136,10 @@
 
       document.getElementById('time-scope-banner').innerText = `Đang xem thống kê: ${timeRange.label}`;
 
-      // TRUY VẤN LỌC NGÀY TRỰC TIẾP TỪ CSDL SUPABASE TRÁNH LÃNG PHÍ TẢI FULL DATA
-      let query = _supabase.from('diem_danh_master').select('*');
+      // TỐI ƯU CÂU TRUY VẤN: CHỈ LẤY CÁC CỘT CẦN THIẾT TỪ CSDL
+      let query = _supabase.from('diem_danh_master')
+        .select('ma_hs, ho_ten, lop, khoi, diem, trang_thai, ngay_diem_danh, buoi, ma_hd, chi_tiet, ten_nguoi_cap_nhat');
+
       if (timeRange.start) query = query.gte('ngay_diem_danh', timeRange.start);
       if (timeRange.end) query = query.lte('ngay_diem_danh', timeRange.end);
 
@@ -1184,7 +1180,6 @@
       if (scope === 'theo_lop' && lopVal) targetClasses = allLopList.filter(l => l.ten_lop === lopVal);
       else if (scope === 'theo_khoi' && khoiVal) targetClasses = allLopList.filter(l => String(l.khoi_id) === khoiVal || l.ten_lop.startsWith(khoiVal));
 
-      // DÙNG MAP XỬ LÝ 1 VÒNG LẶP DUY NHẤT TRÁNH LỖI LẶP LỒNG $O(N \times M)$
       const classMap = new Map();
       targetClasses.forEach(c => {
         classMap.set(c.ten_lop, { ten_lop: c.ten_lop, khoi: c.khoi_id, cong: 0, tru: 0 });
@@ -1238,11 +1233,13 @@
       });
     }
 
+    // TỐI ƯU BẢNG HỌC SINH: CHỈ TÍNH VÀ XUẤT TOP 20 HỌC SINH DẪN ĐẦU
     function renderStudentRanking(records, scope, khoiVal, lopVal) {
       let targetStudents = allStudentsList;
       if (scope === 'theo_lop' && lopVal) targetStudents = allStudentsList.filter(s => s.ten_lop === lopVal);
       else if (scope === 'theo_khoi' && khoiVal) targetStudents = allStudentsList.filter(s => String(s.khoi_id) === khoiVal || (s.ten_lop && s.ten_lop.startsWith(khoiVal)));
 
+      // BƯỚC 1: CHỈ TÍNH TOÁN CHO HỌC SINH PHÁT SINH SỰ KIỆN NẾU DANH SÁCH LỚN TRÁNH VÒNG LẶP DÀI
       const studentMap = new Map();
       targetStudents.forEach(s => {
         studentMap.set(s.ma_hs, { ma_hs: s.ma_hs, ho_ten: s.ho_ten, ten_lop: s.ten_lop, cong: 0, tru: 0, soVang: 0, soVP: 0 });
@@ -1266,17 +1263,19 @@
         tongDiem: 100 + st.cong - st.tru
       }));
 
+      // BƯỚC 2: SẮP XẾP VÀ CHỈ LẤY ĐÚNG TOP 20 THEO YÊU CẦU
       studentStats.sort((a, b) => b.tongDiem - a.tongDiem);
+      const top20Students = studentStats.slice(0, 20);
 
       const tbody = document.getElementById('hs-rank-table-body');
       tbody.innerHTML = '';
 
-      if (studentStats.length === 0) {
+      if (top20Students.length === 0) {
         tbody.innerHTML = '<tr><td colspan="10" class="p-4 text-center text-gray-400">Không tìm thấy học sinh nào trong phạm vi này.</td></tr>';
         return;
       }
 
-      studentStats.forEach((st, index) => {
+      top20Students.forEach((st, index) => {
         tbody.innerHTML += `
           <tr class="border-b clickable-row" onclick="openDrilldownModal('HOCSINH', '${st.ma_hs}', '${st.ho_ten}', '${st.ten_lop}')">
             <td class="p-2.5 text-center font-bold text-emerald-700">${index + 1}</td>
@@ -1343,7 +1342,7 @@
       });
     }
 
-    // 6. XẾP LOẠI & DANH HIỆU THI ĐUA TẬP THỂ (TAB 4)
+    // 6. XẾP LOẠI THI ĐUA TẬP THỂ (TAB 4)
     function onXepLoaiTimeTypeChange() {
       const timeType = document.getElementById('xl-time-type').value;
       ['tuan', 'thang', 'hocky', 'namhoc'].forEach(t => {
@@ -1358,7 +1357,9 @@
 
       document.getElementById('xl-scope-banner').innerText = `Đang xếp loại thi đua thực tế: ${timeRange.label}`;
 
-      let query = _supabase.from('diem_danh_master').select('*');
+      let query = _supabase.from('diem_danh_master')
+        .select('ma_hs, ho_ten, lop, khoi, diem, trang_thai, ngay_diem_danh');
+
       if (timeRange.start) query = query.gte('ngay_diem_danh', timeRange.start);
       if (timeRange.end) query = query.lte('ngay_diem_danh', timeRange.end);
 
@@ -1441,7 +1442,6 @@
       if (subTabName === 'quan-ly-tieu-chi') renderAdminTieuChiTable();
     }
 
-    // 5.1 XEM & SỬA BẢN GHI ĐIỂM DANH/VI PHẠM
     async function fetchAdminRecordsToEdit() {
       const dateVal = document.getElementById('admin-edit-date').value;
       const lopVal = document.getElementById('admin-edit-lop').value;
@@ -1514,7 +1514,6 @@
       } catch (e) { alert("Lỗi xóa: " + e.message); }
     }
 
-    // 5.2 CHUYỂN LỚP HỌC SINH
     let selectedStudentToMove = null;
 
     function searchStudentToMove() {
@@ -1567,7 +1566,6 @@
       } catch (e) { alert("Lỗi chuyển lớp: " + e.message); }
     }
 
-    // 5.3 QUẢN LÝ TIÊU CHÍ (ADMIN)
     function renderAdminTieuChiTable() {
       const tbody = document.getElementById('admin-tc-table-body');
       tbody.innerHTML = '';
@@ -1614,7 +1612,6 @@
       } catch (e) { alert("Lỗi xóa: " + e.message); }
     }
 
-    // 5.4 QUẢN LÝ USER
     async function addUserAdmin() {
       const name = document.getElementById('adm-usr-name').value.trim();
       const email = document.getElementById('adm-usr-email').value.trim();
