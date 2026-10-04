@@ -303,7 +303,7 @@
     </div>
   </div>
 
-  <!-- MODAL XÁC NHẬN MÃ QR KHAI THÁC DỮ LIỆU CÓ CẢNH BÁO MÃ KHÔNG TỒN TẠI -->
+  <!-- MODAL XÁC NHẬN MÃ QR -->
   <div id="qr-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
     <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-gray-100">
       <div class="flex justify-between items-center border-b pb-3">
@@ -344,34 +344,41 @@
       await fetchDanhMucDiem();
     });
 
-    // 3. TẢI DANH SÁCH LỚP HỌC CHUẨN HÓA TRỰC TIẾP TỪ BẢNG 'lop'
+    // 3. TẢI DANH SÁCH LỚP HỌC (TỰ ĐỘNG NHẬN DIỆN KHỐI THÔNG MINH)
     async function fetchAllClasses() {
       try {
         let { data, error } = await _supabase.from('lop').select('ten_lop, khoi_id').order('ten_lop', { ascending: true });
 
         if (error || !data || data.length === 0) {
-          console.warn("Bảng lop trống, tải dự phòng từ bảng hoc_sinh...");
-          const resHS = await _supabase.from('hoc_sinh').select('ten_lop, khoi_id').not('ten_lop', 'is', null);
+          const resHS = await _supabase.from('hoc_sinh').select('ten_lop, khoi_id');
           data = resHS.data || [];
         }
 
-        const setLop = new Set();
-        allLopList = [];
-
+        const classMap = new Map();
         (data || []).forEach(item => {
-          const l = String(item.ten_lop || '').trim();
-          if (l && !setLop.has(l)) {
-            setLop.add(l);
-            let k = String(item.khoi_id || '');
-            if (!k) { const m = l.match(/^\d+/); if (m) k = m[0]; }
-            allLopList.push({ ten_lop: l, khoi_id: k });
+          const rawLop = item.ten_lop || item.lop;
+          if (!rawLop) return;
+          const cleanLop = String(rawLop).trim();
+          if (!cleanLop) return;
+
+          // Tự động bóc tách số khối từ tên lớp (ví dụ: 10A1 -> Khối 10)
+          let khoiId = String(item.khoi_id || '').trim();
+          if (!khoiId || khoiId === 'null' || khoiId === 'undefined') {
+            const match = cleanLop.match(/\d+/);
+            khoiId = match ? match[0] : '10';
+          }
+
+          if (!classMap.has(cleanLop)) {
+            classMap.set(cleanLop, { ten_lop: cleanLop, khoi_id: khoiId });
           }
         });
 
-        allLopList.sort((a, b) => a.ten_lop.localeCompare(b.ten_lop, 'vi', { numeric: true }));
+        allLopList = Array.from(classMap.values()).sort((a, b) => 
+          a.ten_lop.localeCompare(b.ten_lop, 'vi', { numeric: true })
+        );
 
       } catch (err) {
-        console.error("Lỗi kết nối CSDL khi lấy danh sách Lớp:", err);
+        console.error("Lỗi lấy danh sách lớp:", err);
       }
 
       populateLopDropdown('bv-khoi', 'bv-lop');
@@ -380,7 +387,8 @@
     }
 
     function populateLopDropdown(khoiSelectId, lopSelectId) {
-      const khoiVal = document.getElementById(khoiSelectId) ? document.getElementById(khoiSelectId).value : '';
+      const khoiSelect = document.getElementById(khoiSelectId);
+      const khoiVal = khoiSelect ? khoiSelect.value.trim() : '';
       const lopSelect = document.getElementById(lopSelectId);
       if (!lopSelect) return;
 
@@ -388,7 +396,9 @@
 
       const filtered = allLopList.filter(item => {
         if (!khoiVal) return true;
-        return String(item.khoi_id) === String(khoiVal) || item.ten_lop.startsWith(String(khoiVal));
+        const itemKhoi = String(item.khoi_id || '').trim();
+        const itemLop = String(item.ten_lop || '').trim();
+        return itemKhoi === khoiVal || itemLop.startsWith(khoiVal) || itemLop.includes(khoiVal);
       });
 
       filtered.forEach(item => {
@@ -396,7 +406,7 @@
       });
     }
 
-    // 4. TẢI DANH SÁCH HỌC SINH TỪ BẢNG 'hoc_sinh'
+    // 4. TẢI HỌC SINH THUỘC LỚP CỤ THỂ
     async function fetchStudentsByClass(className) {
       if (!className) {
         currentClassStudents = [];
@@ -408,22 +418,28 @@
 
         let { data, error } = await _supabase
           .from('hoc_sinh')
-          .select('*')
+          .select('ma_hs, ho_ten, ngay_sinh, ten_lop')
           .eq('ten_lop', cleanClassName)
           .order('ho_ten', { ascending: true });
 
         if (error || !data || data.length === 0) {
           let resDS = await _supabase
             .from('danh_sach')
-            .select('*')
+            .select('ma_hs, ho_ten, ngay_sinh, lop')
             .eq('lop', cleanClassName);
-          data = resDS.data || [];
+          
+          data = (resDS.data || []).map(d => ({
+            ma_hs: d.ma_hs,
+            ho_ten: d.ho_ten,
+            ngay_sinh: d.ngay_sinh,
+            ten_lop: d.lop
+          }));
         }
 
         currentClassStudents = (data || []).map(s => ({
-          ma_hs: String(s.ma_hs || s.id || '').trim(),
+          ma_hs: String(s.ma_hs || '').trim(),
           ho_ten: String(s.ho_ten || s.hoten || '').trim(),
-          ngay_sinh: s.ngay_sinh || s.ngaysinh || '',
+          ngay_sinh: String(s.ngay_sinh || s.ngaysinh || '').trim(),
           ten_lop: cleanClassName
         })).sort((a, b) => a.ho_ten.localeCompare(b.ho_ten, 'vi'));
 
@@ -741,7 +757,7 @@
       } catch (e) {}
     }
 
-    // CAMERA & SCANNER QR (CÓ CẢNH BÁO NẾU MÃ KHÔNG TỒN TẠI)
+    // CAMERA & SCANNER QR
     function startQRScanner() {
       if (html5QrcodeScanner) return;
       html5QrcodeScanner = new Html5Qrcode("reader");
@@ -801,7 +817,6 @@
 
       document.getElementById('qr-modal').classList.remove('hidden');
 
-      // Tra cứu trực tiếp bảng hoc_sinh
       let { data: student } = await _supabase.from('hoc_sinh').select('*').eq('ma_hs', maHS).maybeSingle();
 
       if (student) {
