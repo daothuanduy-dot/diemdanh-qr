@@ -34,6 +34,9 @@
         </div>
       </div>
       <div class="flex gap-2">
+        <button onclick="openLoginModal()" class="bg-blue-600 text-white font-semibold text-sm px-3 py-2 rounded-lg flex items-center gap-1 shadow-sm hover:bg-blue-700">
+          <i class="fa-solid fa-user-gear"></i> Đổi Tài Khoản
+        </button>
         <button onclick="openTuanHocTotModal()" class="btn-warning font-semibold text-sm px-3 py-2 rounded-lg flex items-center gap-1 shadow-sm hover:opacity-90">
           <i class="fa-solid fa-star"></i> Thiết Lập Tuần Học Tốt
         </button>
@@ -672,6 +675,34 @@
     </main>
   </div>
 
+  <!-- MODAL ĐĂNG NHẬP / ĐỔI NGUỜI DÙNG -->
+  <div id="login-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-gray-100">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 class="text-lg font-bold text-blue-700 flex items-center gap-2"><i class="fa-solid fa-right-to-bracket"></i> Đăng Nhập Tài Khoản</h3>
+        <button onclick="closeLoginModal()" class="text-gray-400 hover:text-red-500 font-bold text-lg">&times;</button>
+      </div>
+      <div class="space-y-3 text-sm">
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1">Họ và Tên Cán Bộ / Giáo Viên:</label>
+          <input type="text" id="login-input-name" value="Đào Thuận Duy" class="w-full border p-2.5 rounded-lg bg-white font-bold text-gray-800">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1">Chọn Vai Trò:</label>
+          <select id="login-input-role" class="w-full border p-2.5 rounded-lg bg-white font-bold text-blue-700">
+            <option value="Admin">Admin (Quản trị viên)</option>
+            <option value="Giáo Viên Chủ Nhiệm">Giáo Viên Chủ Nhiệm</option>
+            <option value="Cán Bộ Lớp">Cán Bộ Lớp / Sao Đỏ</option>
+          </select>
+        </div>
+      </div>
+      <div class="pt-2 flex gap-3">
+        <button onclick="confirmLogin()" class="flex-1 bg-blue-600 text-white py-2.5 rounded-xl font-bold hover:bg-blue-700 shadow-md"><i class="fa-solid fa-check"></i> XÁC NHẬN ĐĂNG NHẬP</button>
+        <button onclick="closeLoginModal()" class="flex-1 bg-gray-200 text-gray-700 py-2.5 rounded-xl font-bold hover:bg-gray-300">HỦY BỎ</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL POPUP XEM CHI TIẾT ĐIỂM -->
   <div id="modal-drilldown-detail" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-3 md:p-6">
     <div class="bg-white rounded-2xl max-w-4xl w-full p-5 shadow-2xl space-y-4 border border-gray-100 max-h-[90vh] flex flex-col">
@@ -745,7 +776,7 @@
       </div>
       <div class="space-y-2 text-sm">
         <div class="flex justify-between border-b pb-1"><span class="text-gray-500">Mã Học Sinh:</span><strong id="modal-ma-hs" class="text-blue-600 font-mono">---</strong></div>
-        <div class="flex justify-between border-b pb-1"><span class="text-gray-500">Họ và Tên:</span><div id="modal-ho-ten" class="text-right">---</div></div>
+        <div class="flex justify-between border-b pb-1"><span class="text-gray-500">Họ và Tên:</span><strong id="modal-ho-ten" class="text-gray-800">---</strong></div>
         <div class="flex justify-between border-b pb-1"><span class="text-gray-500">Lớp / Khối:</span><strong id="modal-lop" class="text-gray-800">---</strong></div>
         <div class="flex justify-between border-b pb-1"><span class="text-gray-500">Ghi nhận:</span><strong id="modal-hinh-thuc" class="text-amber-600">---</strong></div>
       </div>
@@ -773,8 +804,7 @@
     let pendingQRData = null;
 
     function getCurrentBuoi() {
-      const hours = new Date().getHours();
-      return hours < 12 ? 'Sáng' : 'Chiều';
+      return new Date().getHours() < 12 ? 'Sáng' : 'Chiều';
     }
 
     function parseLocalDateStr(dateStr) {
@@ -793,6 +823,8 @@
 
     // 2. KHỞI TẠO HỆ THỐNG
     document.addEventListener("DOMContentLoaded", async () => {
+      loadSavedUserSession();
+
       const autoBuoiStr = getCurrentBuoi();
       if(document.getElementById('bv-buoi-auto')) document.getElementById('bv-buoi-auto').value = autoBuoiStr;
       if(document.getElementById('cd-buoi-auto')) document.getElementById('cd-buoi-auto').value = autoBuoiStr;
@@ -805,6 +837,53 @@
       await fetchAllStudents();
       await fetchDanhMucDiem();
     });
+
+    // TẢI & LƯU PHIÊN ĐĂNG NHẬP
+    function loadSavedUserSession() {
+      const saved = localStorage.getItem('lhp_user_session');
+      if (saved) {
+        try {
+          currentUser = JSON.parse(saved);
+        } catch(e) {}
+      }
+      updateUserUI();
+    }
+
+    function updateUserUI() {
+      document.getElementById('user-name').innerText = currentUser.ho_ten || 'Đào Thuận Duy';
+      document.getElementById('user-role').innerText = currentUser.vai_tro || 'Admin';
+    }
+
+    function openLoginModal() {
+      document.getElementById('login-input-name').value = currentUser.ho_ten || 'Đào Thuận Duy';
+      document.getElementById('login-input-role').value = currentUser.vai_tro || 'Admin';
+      document.getElementById('login-modal').classList.remove('hidden');
+    }
+
+    function closeLoginModal() {
+      document.getElementById('login-modal').classList.add('hidden');
+    }
+
+    function confirmLogin() {
+      const name = document.getElementById('login-input-name').value.trim();
+      const role = document.getElementById('login-input-role').value;
+      if (!name) return alert("Vui lòng nhập tên người dùng!");
+
+      currentUser = { ho_ten: name, vai_tro: role };
+      localStorage.setItem('lhp_user_session', JSON.stringify(currentUser));
+      updateUserUI();
+      closeLoginModal();
+      alert(`Đã đăng nhập thành công dưới tên: ${name} (${role})`);
+    }
+
+    function handleLogout() {
+      if (confirm("Xác nhận đăng xuất tài khoản?")) {
+        localStorage.removeItem('lhp_user_session');
+        currentUser = { ho_ten: "Khách", vai_tro: "Cán Bổ Lớp" };
+        updateUserUI();
+        alert("Đã đăng xuất tài khoản!");
+      }
+    }
 
     // 3. TẢI DANH SÁCH LỚP VÀ HỌC SINH
     async function fetchAllClasses() {
@@ -884,20 +963,46 @@
       });
     }
 
-    // 4. QUÉT MÃ QR THÔNG MINH
-    async function confirmSaveQR() {
-      if (!pendingQRData) return;
-      const { maHS, action, actionText } = pendingQRData;
+    // 4. QUÉT MÃ QR THÔNG MINH (SỬA LỖI TỐI ƯU CAMERA VÀ TRA CỨU TÊN THỜI GIAN THỰC)
+    async function onQRScanned(maHS) {
+      maHS = String(maHS).trim();
+      if (!maHS) return;
 
-      let studentObj = allStudentsList.find(s => String(s.ma_hs) === String(maHS));
+      if (html5QrcodeScanner) {
+        try { html5QrcodeScanner.pause(true); } catch(e){}
+      }
+
+      // 1. Tra cứu thông tin học sinh
+      let studentObj = allStudentsList.find(s => String(s.ma_hs) === maHS);
       if (!studentObj) {
-        let { data: student } = await _supabase.from('hoc_sinh').select('*').eq('ma_hs', maHS).maybeSingle();
-        studentObj = student;
+        let { data } = await _supabase.from('hoc_sinh').select('*').eq('ma_hs', maHS).maybeSingle();
+        if (data) {
+          studentObj = { ma_hs: String(data.ma_hs).trim(), ho_ten: data.ho_ten, ten_lop: data.ten_lop, khoi_id: data.khoi_id };
+        }
       }
 
       const hoTen = studentObj ? studentObj.ho_ten : 'Học Sinh ' + maHS;
-      const lop = studentObj ? studentObj.ten_lop : '';
-      const khoi = studentObj ? (studentObj.khoi_id || (lop.match(/\d+/)?.[0] || '10')) : '10';
+      const lop = studentObj ? studentObj.ten_lop : 'Chưa có lớp';
+
+      const actionRadio = document.querySelector('input[name="qr-action"]:checked');
+      const action = actionRadio ? actionRadio.value : 'muon_khong_phep';
+      const actionText = actionRadio ? actionRadio.parentElement.innerText.trim() : 'Đi học muộn (Không phép)';
+
+      pendingQRData = { maHS, hoTen, lop, action, actionText };
+
+      document.getElementById('modal-ma-hs').innerText = maHS;
+      document.getElementById('modal-ho-ten').innerText = hoTen;
+      document.getElementById('modal-lop').innerText = lop;
+      document.getElementById('modal-hinh-thuc').innerText = actionText;
+
+      document.getElementById('qr-modal').classList.remove('hidden');
+    }
+
+    async function confirmSaveQR() {
+      if (!pendingQRData) return;
+      const { maHS, hoTen, lop, action, actionText } = pendingQRData;
+
+      const khoi = lop ? (lop.match(/\d+/)?.[0] || '10') : '10';
 
       let diemVal = 0;
       let maHDVal = 'HD02a';
@@ -918,19 +1023,21 @@
 
         const vangRecord = existingRecords ? existingRecords.find(r => String(r.trang_thai || '').toLowerCase().includes('vang')) : null;
 
+        // Cắt bớt văn bản ghi chú ngắn gọn để an toàn tuyệt đối với CSDL
+        const noteText = `[Chuyển VẮNG->MUỘN ${nowTimeStr}] ${actionText}`.substring(0, 100);
+
         if (vangRecord) {
-          const updatedNote = `[Chuyển từ VẮNG -> ĐI MUỘN lúc ${nowTimeStr}] ${actionText}`;
           const { error: updateErr } = await _supabase.from('diem_danh_master').update({
             trang_thai: action,
             diem: diemVal,
             ma_hd: maHDVal,
-            chi_tiet: updatedNote,
+            chi_tiet: noteText,
             buoi: autoBuoi,
             ten_nguoi_cap_nhat: currentUser.ho_ten
           }).eq('id', vangRecord.id);
 
           if (updateErr) throw updateErr;
-          alert(`Học sinh ${hoTen} trước đó báo VẮNG. Đã tự động cập nhật lại thành ĐI MUỘN lúc ${nowTimeStr}!`);
+          alert(`Học sinh ${hoTen} trước đó báo VẮNG. Đã tự động chuyển lại thành ĐI MUỘN lúc ${nowTimeStr}!`);
 
         } else {
           const { error: insertErr } = await _supabase.from('diem_danh_master').insert([{
@@ -942,7 +1049,7 @@
             buoi: autoBuoi,
             trang_thai: action,
             ma_hd: maHDVal,
-            chi_tiet: `${actionText} (Lúc ${nowTimeStr})`,
+            chi_tiet: `${actionText} (${nowTimeStr})`.substring(0, 100),
             diem: diemVal,
             ma_nguoi_cap_nhat: currentUser.ho_ten,
             ten_nguoi_cap_nhat: currentUser.ho_ten
@@ -954,13 +1061,20 @@
         const logList = document.getElementById('qr-log-list');
         const logElem = document.createElement('div');
         logElem.className = "p-2 bg-green-50 border border-green-200 text-xs rounded-lg flex justify-between items-center";
-        logElem.innerHTML = `<div><strong>${hoTen} (${lop})</strong> - Buổi ${autoBuoi} - ${actionText}</div><span class="text-gray-400">${nowTimeStr}</span>`;
+        logElem.innerHTML = `<div><strong>${hoTen} (${lop})</strong> - ${actionText}</div><span class="text-gray-400">${nowTimeStr}</span>`;
         if (logList.querySelector('p')) logList.innerHTML = '';
         logList.prepend(logElem);
 
       } catch (e) { alert("Lỗi ghi CSDL: " + e.message); }
 
       closeQRModal();
+    }
+
+    function closeQRModal() {
+      document.getElementById('qr-modal').classList.add('hidden');
+      if (html5QrcodeScanner) {
+        try { html5QrcodeScanner.resume(); } catch(e){}
+      }
     }
 
     async function submitBaoVang() {
@@ -997,7 +1111,7 @@
           buoi: buoiVal,
           trang_thai: isCoPhep ? 'vang_co_phep' : 'vang_khong_phep',
           ma_hd: isCoPhep ? 'HD03a' : 'HD03b',
-          chi_tiet: `Vắng ${isCoPhep ? 'Có phép (-2đ)' : 'Không phép (-4đ)'} - HS: ${hoTen}`,
+          chi_tiet: `Vắng ${isCoPhep ? 'Có phép (-2đ)' : 'Không phép (-4đ)'}`,
           diem: isCoPhep ? -2.0 : -4.0,
           ma_nguoi_cap_nhat: currentUser.ho_ten,
           ten_nguoi_cap_nhat: currentUser.ho_ten
@@ -1054,7 +1168,7 @@
         } else { tenHD = tcVal; }
       }
 
-      const chiTietFull = ghiChu ? `[${maHD}] ${tenHD} (${ghiChu})` : `[${maHD}] ${tenHD}`;
+      const chiTietFull = (ghiChu ? `[${maHD}] ${tenHD} (${ghiChu})` : `[${maHD}] ${tenHD}`).substring(0, 100);
 
       try {
         const { error } = await _supabase.from('diem_danh_master').insert([{
@@ -1081,7 +1195,7 @@
       } catch (e) { alert("Lỗi lưu CSDL: " + e.message); }
     }
 
-    // 5. THỐNG KÊ SIÊU TỐC VÀ CHÍNH XÁC
+    // 5. THỐNG KÊ HỆ THỐNG
     function onThongKeScopeChange() {
       const scope = document.getElementById('tk-doituong').value;
       document.getElementById('box-tk-khoi').classList.toggle('hidden', scope === 'toan_truong');
@@ -1247,14 +1361,12 @@
       });
     }
 
-    // TỔNG HỢP DỮ LIỆU HỌC SINH TỪ BẢN GHI ĐIỂM DANH THỰC TẾ
     function getAggregatedStudentStats(records, scope, khoiVal, lopVal) {
       const studentMap = new Map();
 
-      // 1. Lấy dữ liệu trực tiếp từ các bản ghi thực tế
       records.forEach(r => {
         const mHS = String(r.ma_hs || '').trim();
-        if (!mHS || mHS.startsWith('LOP_')) return; // Bỏ qua bản ghi chấm thi đua cả lớp
+        if (!mHS || mHS.startsWith('LOP_')) return;
 
         const rLop = String(r.lop || '').trim();
         const rKhoi = String(r.khoi || (rLop ? rLop.match(/\d+/)?.[0] : '') || '10').trim();
@@ -1291,7 +1403,6 @@
         if (d < 0 || st === 'diem_tru' || st.includes('muon') || maHd.startsWith('vp') || maHd.startsWith('hd02')) item.soVP += 1;
       });
 
-      // 2. Nếu chọn theo lớp/khối cụ thể, bổ sung các học sinh còn lại chưa có vi phạm
       let targetStudents = [];
       if (scope === 'theo_lop' && lopVal) {
         targetStudents = allStudentsList.filter(s => s.ten_lop === lopVal.trim());
@@ -1367,8 +1478,6 @@
 
     function renderWarningList(records, scope, khoiVal, lopVal) {
       const studentStats = getAggregatedStudentStats(records, scope, khoiVal, lopVal);
-
-      // Lọc các học sinh có Vắng học, Đi muộn hoặc bị trừ điểm vi phạm
       const warningList = studentStats.filter(s => s.soVang > 0 || s.soMuon > 0 || s.soVP > 0 || s.tru > 0);
 
       warningList.sort((a, b) => (b.soVang + b.soMuon + b.tru) - (a.soVang + a.soMuon + a.tru));
@@ -1854,15 +1963,9 @@
     function startQRScanner() {
       if (html5QrcodeScanner) return;
       html5QrcodeScanner = new Html5Qrcode("reader");
-      html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onQRScanned).catch(err => alert("Lỗi Camera: " + err));
+      html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 220, height: 220 } }, onQRScanned).catch(err => alert("Lỗi Camera: " + err));
     }
     function stopQRScanner() { if (html5QrcodeScanner) { html5QrcodeScanner.stop().then(() => { html5QrcodeScanner.clear(); html5QrcodeScanner = null; }); } }
-    async function onQRScanned(maHS) {
-      pendingQRData = { maHS: String(maHS).trim(), action: 'muon_khong_phep', actionText: 'Đi học muộn (Không phép)' };
-      document.getElementById('modal-ma-hs').innerText = maHS;
-      document.getElementById('qr-modal').classList.remove('hidden');
-    }
-    function closeQRModal() { document.getElementById('qr-modal').classList.add('hidden'); }
     function processManualQR() { const val = document.getElementById('manual-ma-hs').value.trim(); if(val) onQRScanned(val); }
 
     function switchTab(index) {
@@ -1872,7 +1975,6 @@
       if (index === 4) renderXepLoai();
       if (index !== 0) stopQRScanner();
     }
-    function handleLogout() { if (confirm("Đăng xuất khỏi hệ thống?")) location.reload(); }
   </script>
 </body>
 </html>
