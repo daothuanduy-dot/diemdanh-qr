@@ -246,9 +246,9 @@
         </button>
       </section>
 
-      <!-- TAB 3: THỐNG KÊ, XẾP HẠNG & CẢNH BÁO HOÀN THIỆN -->
+      <!-- TAB 3: THỐNG KÊ & XẾP HẠNG -->
       <section id="content-tab-3" class="tab-content hidden space-y-6">
-        <h2 class="text-lg font-bold text-blue-800 uppercase flex items-center gap-2"><i class="fa-solid fa-chart-line"></i> 3. Báo Cáo Thống Kê, Xếp Hạng & Cảnh Báo</h2>
+        <h2 class="text-lg font-bold text-blue-800 uppercase flex items-center gap-2"><i class="fa-solid fa-chart-line"></i> 3. Báo Cáo Thống Kê & Xếp Hạng Nề Nếp</h2>
         
         <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -430,28 +430,100 @@
         </div>
       </section>
 
-      <!-- TAB 4: XẾP LOẠI -->
+      <!-- TAB 4: XẾP LOẠI & DANH HIỆU THI ĐUA TẬP THỂ (TÍNH THEO CSDL THỰC TẾ) -->
       <section id="content-tab-4" class="tab-content hidden space-y-4">
-        <h2 class="text-lg font-bold text-red-600 uppercase">4. Bảng Xếp Loại & Danh Hiệu Thi Đua Tập Thể</h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
-          <div><label class="block text-xs font-bold text-gray-700 mb-1">Kỳ/Tháng:</label><select id="xl-thang" class="w-full border p-2.5 rounded-lg text-sm"><option value="hientai">Tháng Hiện Tại</option></select></div>
-          <div><label class="block text-xs font-bold text-gray-700 mb-1">Khối:</label><select id="xl-khoi" class="w-full border p-2.5 rounded-lg text-sm"><option value="">Tất cả Khối</option><option value="10">Khối 10</option><option value="11">Khối 11</option><option value="12">Khối 12</option></select></div>
-          <button onclick="renderXepLoai()" class="btn-red p-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 shadow-sm hover:opacity-90"><i class="fa-solid fa-trophy"></i> XẾP HẠNG THI ĐUA</button>
+        <h2 class="text-lg font-bold text-red-600 uppercase flex items-center gap-2"><i class="fa-solid fa-trophy text-amber-500"></i> 4. Bảng Xếp Loại & Danh Hiệu Thi Đua Tập Thể</h2>
+        
+        <!-- BỘ LỌC THỜI GIAN VÀ KHỐI ĐẦY ĐỦ -->
+        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-gray-700 mb-1">Kỳ / Thời Gian Xếp Loại:</label>
+              <select id="xl-time-type" onchange="onXepLoaiTimeTypeChange()" class="w-full border p-2.5 rounded-lg text-sm bg-white font-semibold text-blue-700">
+                <option value="tuan">Theo Tuần</option>
+                <option value="thang" selected>Theo Tháng</option>
+                <option value="hocky">Theo Học Kỳ</option>
+                <option value="namhoc">Cả Năm Học</option>
+              </select>
+            </div>
+
+            <div id="xl-box-tuan" class="hidden">
+              <label class="block text-xs font-bold text-gray-700 mb-1">Chọn ngày trong tuần:</label>
+              <input type="date" id="xl-date-tuan" class="w-full border p-2 rounded-lg text-sm bg-white">
+            </div>
+
+            <div id="xl-box-thang" class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1">Tháng:</label>
+                <select id="xl-val-thang" class="w-full border p-2 rounded-lg text-sm bg-white">
+                  <option value="1">Tháng 1</option><option value="2">Tháng 2</option><option value="3">Tháng 3</option><option value="4">Tháng 4</option><option value="5">Tháng 5</option><option value="6">Tháng 6</option><option value="7">Tháng 7</option><option value="8">Tháng 8</option><option value="9">Tháng 9</option><option value="10" selected>Tháng 10</option><option value="11">Tháng 11</option><option value="12">Tháng 12</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1">Năm:</label>
+                <input type="number" id="xl-val-nam-thang" value="2026" class="w-full border p-2 rounded-lg text-sm bg-white font-bold text-center">
+              </div>
+            </div>
+
+            <div id="xl-box-hocky" class="hidden grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1">Học Kỳ:</label>
+                <select id="xl-val-hocky" class="w-full border p-2 rounded-lg text-sm bg-white">
+                  <option value="HK1">Học Kỳ I (T9 - T1)</option>
+                  <option value="HK2">Học Kỳ II (T2 - T6)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1">Năm Học:</label>
+                <input type="number" id="xl-val-nam-hk" value="2026" class="w-full border p-2 rounded-lg text-sm bg-white font-bold text-center">
+              </div>
+            </div>
+
+            <div id="xl-box-namhoc" class="hidden">
+              <label class="block text-xs font-bold text-gray-700 mb-1">Chọn Năm Học:</label>
+              <select id="xl-val-namhoc" class="w-full border p-2 rounded-lg text-sm bg-white font-bold">
+                <option value="2025">Năm Học 2025 - 2026</option>
+                <option value="2026" selected>Năm Học 2026 - 2027</option>
+                <option value="2027">Năm Học 2027 - 2028</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-gray-700 mb-1">Phạm vi Khối:</label>
+              <select id="xl-khoi" class="w-full border p-2.5 rounded-lg text-sm bg-white font-medium">
+                <option value="">Tất cả các Khối</option>
+                <option value="10">Khối 10</option>
+                <option value="11">Khối 11</option>
+                <option value="12">Khối 12</option>
+              </select>
+            </div>
+
+            <div class="flex items-end">
+              <button onclick="renderXepLoai()" class="w-full btn-red p-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 shadow-sm hover:opacity-90">
+                <i class="fa-solid fa-trophy"></i> XẾP HẠNG THI ĐUA TẬP THỂ
+              </button>
+            </div>
+          </div>
         </div>
-        <div class="overflow-x-auto mt-4 border rounded-lg">
+
+        <div id="xl-scope-banner" class="bg-amber-50 border border-amber-200 p-2.5 rounded-xl text-center font-bold text-amber-800 text-sm">
+          Đang tổng hợp thi đua thực tế từ CSDL
+        </div>
+
+        <div class="overflow-x-auto border rounded-xl shadow-sm">
           <table class="w-full text-sm text-left">
             <thead class="bg-gray-800 text-white uppercase text-xs">
               <tr>
                 <th class="p-3 text-center">Xếp Hạng</th>
-                <th class="p-3 text-center">Lớp</th>
+                <th class="p-3">Tên Lớp</th>
                 <th class="p-3 text-center">Khối</th>
                 <th class="p-3 text-center">Tổng Điểm</th>
-                <th class="p-3">Đánh Giá Vi Phạm</th>
-                <th class="p-3">Danh Hiệu Thi Đua</th>
+                <th class="p-3">Đánh Giá Nề Nếp / Vi Phạm</th>
+                <th class="p-3">Danh Hiệu Thi Đua Tập Thể</th>
               </tr>
             </thead>
             <tbody id="xl-table-body">
-              <tr><td colspan="6" class="p-6 text-center text-gray-400 bg-gray-50">Nhấn nút "XẾP HẠNG THI ĐUA" để xem kết quả...</td></tr>
+              <tr><td colspan="6" class="p-6 text-center text-gray-400 bg-gray-50">Nhấn nút "XẾP HẠNG THI ĐUA TẬP THỂ" để tính điểm thực tế...</td></tr>
             </tbody>
           </table>
         </div>
@@ -585,19 +657,15 @@
     let html5QrcodeScanner = null;
     let pendingQRData = null;
 
-    // HÀM TỰ ĐỘNG XÁC ĐỊNH BUỔI DỰA VÀO GIỜ HỆ THỐNG
     function getCurrentBuoi() {
       const now = new Date();
       const hours = now.getHours();
       const minutes = now.getMinutes();
       const totalMinutes = hours * 60 + minutes;
-      if (totalMinutes >= 360 && totalMinutes <= 720) {
-        return 'Sáng';
-      }
+      if (totalMinutes >= 360 && totalMinutes <= 720) return 'Sáng';
       return 'Chiều';
     }
 
-    // HELPER TẠO NGÀY KHÔNG BỊ BỎ SÓT LỆCH MÚI GIỜ
     function parseLocalDateStr(dateStr) {
       if (!dateStr) return new Date();
       const parts = dateStr.split('-');
@@ -614,7 +682,8 @@
 
     // 2. KHỞI TẠO TỰ ĐỘNG
     document.addEventListener("DOMContentLoaded", async () => {
-      document.getElementById('tk-date-tuan').valueAsDate = new Date();
+      if(document.getElementById('tk-date-tuan')) document.getElementById('tk-date-tuan').valueAsDate = new Date();
+      if(document.getElementById('xl-date-tuan')) document.getElementById('xl-date-tuan').valueAsDate = new Date();
       
       const currentBuoi = getCurrentBuoi();
       if(document.getElementById('bv-buoi')) document.getElementById('bv-buoi').value = currentBuoi;
@@ -663,7 +732,12 @@
     async function fetchAllStudents() {
       try {
         const { data } = await _supabase.from('hoc_sinh').select('ma_hs, ho_ten, ten_lop, khoi_id');
-        allStudentsList = data || [];
+        allStudentsList = (data || []).map(s => ({
+          ma_hs: String(s.ma_hs).trim(),
+          ho_ten: String(s.ho_ten).trim(),
+          ten_lop: String(s.ten_lop || '').trim(),
+          khoi_id: String(s.khoi_id || (s.ten_lop ? s.ten_lop.match(/\d+/)?.[0] : '10')).trim()
+        }));
       } catch (e) { console.error(e); }
     }
 
@@ -687,12 +761,12 @@
       });
     }
 
-    // 4. LƯU DỮ LIỆU CSDL ĐẦY ĐỦ
+    // 4. LƯU DỮ LIỆU CSDL
     async function confirmSaveQR() {
       if (!pendingQRData) return;
       const { maHS, action, actionText } = pendingQRData;
 
-      let studentObj = allStudentsList.find(s => String(s.ma_hs).trim() === String(maHS).trim());
+      let studentObj = allStudentsList.find(s => String(s.ma_hs) === String(maHS));
       if (!studentObj) {
         let { data: student } = await _supabase.from('hoc_sinh').select('*').eq('ma_hs', maHS).maybeSingle();
         studentObj = student;
@@ -860,7 +934,7 @@
       } catch (e) { alert("Lỗi lưu CSDL: " + e.message); }
     }
 
-    // 5. NÂNG CẤP TOÀN BỘ BỘ THỐNG KÊ VÀ BẢNG POPUP CHI TIẾT
+    // 5. BỘ THỐNG KÊ TAB 3 (THỐNG KÊ & XẾP HẠNG)
     function onThongKeScopeChange() {
       const scope = document.getElementById('tk-doituong').value;
       document.getElementById('box-tk-khoi').classList.toggle('hidden', scope === 'toan_truong');
@@ -875,16 +949,15 @@
       });
     }
 
-    function calculateTimeRange() {
-      const timeType = document.getElementById('tk-time-type').value;
+    function calculateTimeRange(prefix = 'tk') {
+      const timeType = document.getElementById(`${prefix}-time-type`).value;
       let start = '', end = '', label = '';
 
       if (timeType === 'tuan') {
-        const dateInputStr = document.getElementById('tk-date-tuan').value || formatDateToYYYYMMDD(new Date());
+        const dateInputStr = document.getElementById(`${prefix}-date-tuan`).value || formatDateToYYYYMMDD(new Date());
         const d = parseLocalDateStr(dateInputStr);
         const day = d.getDay();
         const diffMon = (day === 0 ? -6 : 1 - day);
-        
         const mon = new Date(d.getFullYear(), d.getMonth(), d.getDate() + diffMon);
         const sun = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6);
 
@@ -893,49 +966,48 @@
         label = `Tuần từ ${mon.toLocaleDateString('vi-VN')} đến ${sun.toLocaleDateString('vi-VN')}`;
 
       } else if (timeType === 'thang') {
-        const m = parseInt(document.getElementById('tk-val-thang').value);
-        const y = parseInt(document.getElementById('tk-val-nam-thang').value);
+        const m = parseInt(document.getElementById(`${prefix}-val-thang`).value);
+        const y = parseInt(document.getElementById(`${prefix}-val-nam-thang`).value);
         start = `${y}-${String(m).padStart(2, '0')}-01`;
         const lastDay = new Date(y, m, 0).getDate();
         end = `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
         label = `Tháng ${m}/${y}`;
 
       } else if (timeType === 'hocky') {
-        const hk = document.getElementById('tk-val-hocky').value;
-        const y = parseInt(document.getElementById('tk-val-nam-hk').value);
-        if (hk === 'HK1') { start = `${y}-09-01`; end = `${y + 1}-01-31`; label = `Học Kỳ I (${y}-${y + 1})`; }
-        else { start = `${y + 1}-02-01`; end = `${y + 1}-06-30`; label = `Học Kỳ II (${y}-${y + 1})`; }
+        const hk = document.getElementById(`${prefix}-val-hocky`).value;
+        const y = parseInt(document.getElementById(`${prefix}-val-nam-hk`).value);
+        if (hk === 'HK1') { start = `${y}-09-01`; end = `${y + 1}-01-31`; label = `Học Kỳ I (${y} - ${y + 1})`; }
+        else { start = `${y + 1}-02-01`; end = `${y + 1}-06-30`; label = `Học Kỳ II (${y} - ${y + 1})`; }
 
       } else if (timeType === 'namhoc') {
-        const y = parseInt(document.getElementById('tk-val-namhoc').value);
+        const y = parseInt(document.getElementById(`${prefix}-val-namhoc`).value);
         start = `${y}-09-01`; end = `${y + 1}-08-31`;
         label = `Cả Năm Học ${y} - ${y + 1}`;
 
       } else if (timeType === 'tuduy') {
-        start = document.getElementById('tk-date-from').value;
-        end = document.getElementById('tk-date-to').value;
+        start = document.getElementById(`${prefix}-date-from`).value;
+        end = document.getElementById(`${prefix}-date-to`).value;
         label = `Từ ngày ${start || '...'} đến ${end || '...'}`;
       }
 
-      currentActiveTimeRange = { start, end, label };
-      return currentActiveTimeRange;
+      return { start, end, label };
     }
 
     async function renderFullStatistics() {
       const scope = document.getElementById('tk-doituong').value;
       const khoiVal = document.getElementById('tk-khoi').value;
       const lopVal = document.getElementById('tk-lop').value;
-      const timeRange = calculateTimeRange();
+      const timeRange = calculateTimeRange('tk');
+      currentActiveTimeRange = timeRange;
 
       document.getElementById('time-scope-banner').innerText = `Đang xem thống kê: ${timeRange.label}`;
 
-      // LẤY TẤT CẢ DỮ LIỆU ĐỂ LỌC TRỰC TIẾP TRÊN CLIENT TRÁNH BỊ LỖI CHUỖI CSDL SUPABASE
       const { data: rawMasterData, error } = await _supabase.from('diem_danh_master').select('*');
       if (error) return alert("Lỗi truy vấn CSDL: " + error.message);
 
       const allRecords = rawMasterData || [];
 
-      // LỌC CHUẨN KHOẢNG NGÀY
+      // LỌC THEO KHOẢNG NGÀY
       activeFilteredMasterRecords = allRecords.filter(r => {
         const rDate = r.ngay_diem_danh ? String(r.ngay_diem_danh).substring(0, 10) : '';
         if (timeRange.start && rDate < timeRange.start) return false;
@@ -950,7 +1022,6 @@
         filteredRecords = activeFilteredMasterRecords.filter(r => String(r.khoi) === khoiVal || (r.lop && r.lop.startsWith(khoiVal)));
       }
 
-      // TÍNH BẢNG TỔNG THỐNG KÊ
       let totalVP = 0, totalCong = 0, totalTru = 0, totalVang = 0;
       filteredRecords.forEach(r => {
         const diem = parseFloat(r.diem) || 0;
@@ -971,13 +1042,11 @@
       renderWarningList(filteredRecords, scope, khoiVal, lopVal);
     }
 
-    // XẾP HẠNG THI ĐUA LỚP (TỪ CAO XUỐNG THẤP)
+    // BẢNG XẾP HẠNG LỚP TRONG TAB 3
     function renderClassRanking(records, scope, khoiVal, lopVal) {
       let targetClasses = allLopList;
       if (scope === 'theo_lop' && lopVal) targetClasses = allLopList.filter(l => l.ten_lop === lopVal);
       else if (scope === 'theo_khoi' && khoiVal) targetClasses = allLopList.filter(l => String(l.khoi_id) === khoiVal || l.ten_lop.startsWith(khoiVal));
-
-      if (targetClasses.length === 0 && allLopList.length > 0) targetClasses = allLopList;
 
       const classStats = targetClasses.map(c => {
         const cLop = c.ten_lop;
@@ -992,9 +1061,9 @@
 
         const tongDiem = 100 + cong - tru;
         let xepLoai = 'Lớp Xuất Sắc';
-        if (tongDiem < 80) xepLoai = 'Lớp Cần Cố Gắng';
-        else if (tongDiem < 90) xepLoai = 'Lớp Khá';
-        else if (tongDiem < 100) xepLoai = 'Lớp Tiên Tiến';
+        if (tongDiem < 70) xepLoai = 'Lớp Cần Cố Gắng';
+        else if (tongDiem < 85) xepLoai = 'Lớp Khá';
+        else if (tongDiem < 95) xepLoai = 'Lớp Tiên Tiến';
 
         return { ten_lop: cLop, khoi: c.khoi_id, base: 100, cong, tru, tongDiem, xepLoai };
       });
@@ -1010,7 +1079,7 @@
       }
 
       classStats.forEach((cs, index) => {
-        const badgeColor = cs.tongDiem >= 100 ? 'text-emerald-600 font-bold' : (cs.tongDiem >= 90 ? 'text-blue-600 font-bold' : 'text-red-600 font-bold');
+        const badgeColor = cs.tongDiem >= 95 ? 'text-emerald-600 font-bold' : (cs.tongDiem >= 85 ? 'text-blue-600 font-bold' : 'text-red-600 font-bold');
         tbody.innerHTML += `
           <tr class="border-b clickable-row" onclick="openDrilldownModal('LOP', '${cs.ten_lop}')">
             <td class="p-2.5 text-center font-bold text-blue-600">${index + 1}</td>
@@ -1027,7 +1096,7 @@
       });
     }
 
-    // XẾP HẠNG HỌC SINH (TỪ CAO XUỐNG THẤP)
+    // BẢNG XẾP HẠNG HỌC SINH TRONG TAB 3
     function renderStudentRanking(records, scope, khoiVal, lopVal) {
       let targetStudents = allStudentsList;
       if (scope === 'theo_lop' && lopVal) targetStudents = allStudentsList.filter(s => s.ten_lop === lopVal);
@@ -1057,7 +1126,7 @@
       tbody.innerHTML = '';
 
       if (studentStats.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="p-4 text-center text-gray-400">Chưa có danh sách học sinh.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="p-4 text-center text-gray-400">Không tìm thấy học sinh nào trong phạm vi này.</td></tr>';
         return;
       }
 
@@ -1079,7 +1148,6 @@
       });
     }
 
-    // BẢNG CẢNH BÁO HỌC SINH
     function renderWarningList(records, scope, khoiVal, lopVal) {
       let targetStudents = allStudentsList;
       if (scope === 'theo_lop' && lopVal) targetStudents = allStudentsList.filter(s => s.ten_lop === lopVal);
@@ -1129,7 +1197,99 @@
       });
     }
 
-    // 6. POPUP XEM CHI TIẾT LỊCH SỬ ĐIỂM CỘNG TRỪ
+    // 6. TÍNH NĂNG XẾP LOẠI & DANH HIỆU THI ĐUA TẬP THỂ (TAB 4 HOÀN CHỈNH TỪ CSDL)
+    function onXepLoaiTimeTypeChange() {
+      const timeType = document.getElementById('xl-time-type').value;
+      ['tuan', 'thang', 'hocky', 'namhoc'].forEach(t => {
+        const box = document.getElementById(`xl-box-${t}`);
+        if (box) box.classList.toggle('hidden', t !== timeType);
+      });
+    }
+
+    async function renderXepLoai() {
+      const khoiFilter = document.getElementById('xl-khoi').value;
+      const timeRange = calculateTimeRange('xl');
+
+      document.getElementById('xl-scope-banner').innerText = `Đang xếp loại thi đua thực tế: ${timeRange.label}`;
+
+      // TRUY VẤN DỮ LIỆU THỰC TẾ TỪ SUPABASE
+      const { data: rawMasterData, error } = await _supabase.from('diem_danh_master').select('*');
+      if (error) return alert("Lỗi kết nối CSDL: " + error.message);
+
+      const allRecords = rawMasterData || [];
+
+      // LỌC RECORD THEO KHUNG THỜI GIAN ĐÃ CHỌN
+      const periodRecords = allRecords.filter(r => {
+        const rDate = r.ngay_diem_danh ? String(r.ngay_diem_danh).substring(0, 10) : '';
+        if (timeRange.start && rDate < timeRange.start) return false;
+        if (timeRange.end && rDate > timeRange.end) return false;
+        return true;
+      });
+
+      // LỌC DANH SÁCH LỚP THEO KHỐI
+      let targetClasses = allLopList;
+      if (khoiFilter) {
+        targetClasses = allLopList.filter(l => String(l.khoi_id) === khoiFilter || l.ten_lop.startsWith(khoiFilter));
+      }
+
+      const classRankings = targetClasses.map(c => {
+        const cLop = c.ten_lop;
+        const cRecords = periodRecords.filter(r => String(r.lop).trim() === cLop || r.ma_hs === `LOP_${cLop}`);
+
+        let cong = 0, tru = 0, vpCount = 0;
+        cRecords.forEach(r => {
+          const d = parseFloat(r.diem) || 0;
+          if (d > 0) cong += d;
+          if (d < 0) { tru += Math.abs(d); vpCount += 1; }
+        });
+
+        const tongDiem = 100 + cong - tru;
+
+        let danhHieu = 'Cần Cố Gắng';
+        let danhHieuStyle = 'text-gray-600 font-bold';
+
+        if (tongDiem >= 95) {
+          danhHieu = '🥇 Lớp Xuất Sắc (Cờ Thi Đua)';
+          danhHieuStyle = 'text-amber-600 font-bold';
+        } else if (tongDiem >= 85) {
+          danhHieu = '🥈 Lớp Tiên Tiến';
+          danhHieuStyle = 'text-emerald-600 font-bold';
+        } else if (tongDiem >= 70) {
+          danhHieu = '🥉 Lớp Khá';
+          danhHieuStyle = 'text-blue-600 font-bold';
+        }
+
+        let danhGiaVP = vpCount === 0 ? 'Nề nếp rất tốt (Không vi phạm)' : `Có ${vpCount} lượt vi phạm (-${tru}đ)`;
+
+        return { ten_lop: cLop, khoi: c.khoi_id, tongDiem, vpCount, tru, danhGiaVP, danhHieu, danhHieuStyle };
+      });
+
+      // SẮP XẾP ĐIỂM TỪ CAO XUỐNG THẤP
+      classRankings.sort((a, b) => b.tongDiem - a.tongDiem);
+
+      const tbody = document.getElementById('xl-table-body');
+      tbody.innerHTML = '';
+
+      if (classRankings.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-gray-400">Không tìm thấy dữ liệu lớp tương ứng.</td></tr>';
+        return;
+      }
+
+      classRankings.forEach((cs, index) => {
+        tbody.innerHTML += `
+          <tr class="border-b hover:bg-gray-50 transition-colors">
+            <td class="p-3 text-center font-bold text-blue-600 text-base">${index + 1}</td>
+            <td class="p-3 font-bold text-gray-800 text-base">${cs.ten_lop}</td>
+            <td class="p-3 text-center font-medium">${cs.khoi}</td>
+            <td class="p-3 text-center font-bold text-base ${cs.tongDiem >= 90 ? 'text-emerald-600' : 'text-red-600'}">${cs.tongDiem}đ</td>
+            <td class="p-3 text-gray-600 text-xs">${cs.danhGiaVP}</td>
+            <td class="p-3 ${cs.danhHieuStyle} text-sm">${cs.danhHieu}</td>
+          </tr>
+        `;
+      });
+    }
+
+    // 7. POPUP DRILL-DOWN VÀ HELPER
     function openDrilldownModal(type, targetId, extraName = '', extraLop = '') {
       const modal = document.getElementById('modal-drilldown-detail');
       const title = document.getElementById('modal-detail-title');
@@ -1189,7 +1349,6 @@
 
     function closeDrilldownModal() { document.getElementById('modal-drilldown-detail').classList.add('hidden'); }
 
-    // 7. CÁC HÀM QUẢN LÝ TIÊU CHÍ VÀ HELPER
     async function fetchDanhMucDiem() {
       try {
         let { data } = await _supabase.from('danh_muc_diem').select('*');
@@ -1291,17 +1450,6 @@
       students.forEach(s => { studentSelect.innerHTML += `<option value="${s.ma_hs}">${s.ho_ten} - (${s.ma_hs})</option>`; });
     }
 
-    async function renderXepLoai() {
-      const khoiFilter = document.getElementById('xl-khoi').value;
-      let classes = allLopList.map(l => l.ten_lop);
-      if (khoiFilter) classes = classes.filter(l => l.startsWith(khoiFilter));
-      const tbody = document.getElementById('xl-table-body');
-      tbody.innerHTML = '';
-      classes.forEach((lop, index) => {
-        tbody.innerHTML += `<tr class="border-b hover:bg-gray-50"><td class="p-3 text-center font-bold text-blue-600">${index + 1}</td><td class="p-3 text-center font-bold">${lop}</td><td class="p-3 text-center">${lop.substring(0,2)}</td><td class="p-3 text-center font-bold text-emerald-600">${100 - index * 2}</td><td class="p-3 text-gray-500">Nề nếp tốt</td><td class="p-3 font-semibold text-amber-600"><i class="fa-solid fa-award"></i> Lớp Xuất Sắc</td></tr>`;
-      });
-    }
-
     function openTuanHocTotModal() {
       const lopSelect = document.getElementById('tht-lop');
       lopSelect.innerHTML = '<option value="">-- Chọn Lớp --</option>';
@@ -1329,6 +1477,7 @@
       document.querySelectorAll('.tab-btn').forEach((btn, i) => btn.classList.toggle('active', i === index));
       document.querySelectorAll('.tab-content').forEach((c, i) => c.classList.toggle('hidden', i !== index));
       if (index === 3) renderFullStatistics();
+      if (index === 4) renderXepLoai();
       if (index !== 0) stopQRScanner();
     }
     function handleLogout() { if (confirm("Đăng xuất khỏi hệ thống?")) location.reload(); }
