@@ -288,7 +288,7 @@
   </div>
 
   <script>
-    // 1. SUPABASE CLIENT CONFIG
+    // 1. KẾT NỐI SUPABASE
     const SUPABASE_URL = "https://vbhtgkvvmwfztswxlvnl.supabase.co";
     const SUPABASE_KEY = "sb_publishable_5imLFI2Ey7Gi3mOfp2brFg_3zBU_pOZ";
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -306,17 +306,37 @@
       await fetchDanhMucDiem();
     });
 
-    // 3. TẢI DANH SÁCH LỚP HỌC (TỰ ĐỘNG CHUYỂN BẢNG DỰ PHÒNG NẾU CẦN)
+    // 3. TẢI DANH SÁCH LỚP HỌC (SỬ DỤNG TRUY VẤN ĐA TẦNG FALLBACK)
     async function fetchAllClasses() {
       try {
+        // Tầng 1: Lấy từ bảng chuẩn hóa 'lop'
         let { data, error } = await _supabase.from('lop').select('*').order('ten_lop', { ascending: true });
 
+        // Tầng 2: Nếu bảng 'lop' trống, lấy từ bảng 'hoc_sinh'
         if (error || !data || data.length === 0) {
-          const res = await _supabase.from('danh_sach').select('lop, khoi').not('lop', 'is', null);
-          if (res.data) {
+          const resHS = await _supabase.from('hoc_sinh').select('ten_lop, khoi_id').not('ten_lop', 'is', null);
+          if (resHS.data && resHS.data.length > 0) {
             const setLop = new Set();
             data = [];
-            res.data.forEach(item => {
+            resHS.data.forEach(item => {
+              const l = String(item.ten_lop || '').trim();
+              if (l && !setLop.has(l)) {
+                setLop.add(l);
+                let k = item.khoi_id || '';
+                if (!k) { const m = l.match(/^\d+/); if (m) k = m[0]; }
+                data.push({ ten_lop: l, khoi_id: k });
+              }
+            });
+          }
+        }
+
+        // Tầng 3: Nếu vẫn trống, lấy từ bảng 'danh_sach'
+        if (!data || data.length === 0) {
+          const resDS = await _supabase.from('danh_sach').select('lop, khoi').not('lop', 'is', null);
+          if (resDS.data) {
+            const setLop = new Set();
+            data = [];
+            resDS.data.forEach(item => {
               const l = String(item.lop || '').trim();
               if (l && !setLop.has(l)) {
                 setLop.add(l);
@@ -359,7 +379,7 @@
       });
     }
 
-    // 4. TẢI TOÀN BỘ HỌC SINH CỦA CỦA MỘT LỚP CỤ THỂ
+    // 4. TẢI HỌC SINH CỦA CỦA MỘT LỚP CỤ THỂ (DÙNG ILIKE ĐỂ BỎ QUA VIẾT HOA/THƯỜNG VÀ KHOẢNG TRẮNG)
     async function fetchStudentsByClass(className) {
       if (!className) {
         currentClassStudents = [];
@@ -367,17 +387,21 @@
       }
 
       try {
+        const cleanClassName = className.trim();
+
+        // Tìm trong bảng 'hoc_sinh'
         let { data, error } = await _supabase
           .from('hoc_sinh')
           .select('*')
-          .eq('ten_lop', className)
+          .ilike('ten_lop', cleanClassName)
           .order('ho_ten', { ascending: true });
 
+        // Nếu trống, tìm tiếp trong bảng 'danh_sach'
         if (error || !data || data.length === 0) {
           let res = await _supabase
             .from('danh_sach')
             .select('*')
-            .eq('lop', className);
+            .ilike('lop', cleanClassName);
           
           data = res.data || [];
         }
@@ -386,7 +410,7 @@
           ma_hs: String(item.ma_hs || item.id || '').trim(),
           ho_ten: String(item.ho_ten || item.hoten || '').trim(),
           ngay_sinh: item.ngay_sinh || item.ngaysinh || '',
-          ten_lop: className
+          ten_lop: cleanClassName
         })).sort((a, b) => a.ho_ten.localeCompare(b.ho_ten, 'vi'));
 
         return currentClassStudents;
@@ -408,7 +432,7 @@
       const countLabel = document.getElementById('bv-student-count');
       
       if (lopVal) {
-        countLabel.innerText = "Đang tải học sinh...";
+        countLabel.innerText = "Đang tải danh sách học sinh...";
         await fetchStudentsByClass(lopVal);
         countLabel.innerText = `Sĩ số: ${currentClassStudents.length} học sinh`;
       } else {
