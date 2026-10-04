@@ -22,7 +22,7 @@
 </head>
 <body class="p-3 md:p-6 min-h-screen">
 
-  <!-- MÀN HÌNH KHÓA ĐĂNG NHẬP BẮT BUỘC (ĐỐI CHIẾU MÃ + MẬT KHẨU) -->
+  <!-- MÀN HÌNH KHÓA ĐĂNG NHẬP BẮT BUỘC -->
   <div id="login-overlay" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[100] flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-gray-100">
       <div class="text-center border-b pb-3">
@@ -982,27 +982,61 @@
         .forEach(item => lopSelect.innerHTML += `<option value="${item.ten_lop}">${item.ten_lop}</option>`);
     }
 
+    // HÀM BÓC TÁCH MÃ MÃ HS SIÊU TRÍ TUỆ TỪ CHUỖI QR THẺ THỰC TẾ
+    function parseQRData(rawQR) {
+      if (!rawQR) return { maHS: '', hoTen: '', lop: '', khoi: '' };
+      rawQR = String(rawQR).trim();
+
+      // 1. Khớp trực tiếp với đệm Fast-Map
+      for (let [ma, sObj] of studentFastMap.entries()) {
+        if (ma && rawQR.includes(ma)) {
+          return {
+            maHS: ma,
+            hoTen: sObj.ho_ten || '',
+            lop: sObj.ten_lop || 'Chưa xếp lớp',
+            khoi: sObj.khoi_id || (sObj.ten_lop ? sObj.ten_lop.match(/\d+/)?.[0] : '10')
+          };
+        }
+      }
+
+      // 2. Dùng Regex tìm Mã số học sinh (Dãy 6-15 chữ số hoặc dạng Mã HS:)
+      let cleanMa = '';
+      let matchDigit = rawQR.match(/\b\d{6,15}\b/);
+      let matchPattern = rawQR.match(/(?:mã\s*hs|ma\s*hs|hs)?[:\s]*([a-z0-9_-]{5,20})/i);
+
+      if (matchDigit) cleanMa = matchDigit[0].trim();
+      else if (matchPattern) cleanMa = matchPattern[1].trim();
+      else cleanMa = rawQR.split('|')[0].replace(/[^a-zA-Z0-9]/g, '').slice(0, 20);
+
+      // Tra cứu lại
+      let sObj = studentFastMap.get(cleanMa);
+
+      // 3. Trích xuất Họ tên nếu có dạng "Họ tên: Nguyễn Hữu An"
+      let parsedName = '';
+      let matchName = rawQR.match(/(?:họ\s*tên|ho\s*ten|họ\s*và\s*tên)[:\s]*([^|]+)/i);
+      if (matchName && matchName[1]) parsedName = matchName[1].trim();
+
+      return {
+        maHS: cleanMa || rawQR.slice(0, 20),
+        hoTen: sObj ? sObj.ho_ten : (parsedName || 'Học sinh mã ' + cleanMa),
+        lop: sObj ? (sObj.ten_lop || 'Chưa xếp lớp') : 'Chưa xếp lớp',
+        khoi: sObj ? (sObj.khoi_id || (sObj.ten_lop ? sObj.ten_lop.match(/\d+/)?.[0] : '10')) : '10'
+      };
+    }
+
     // 4. THUẬT TOÁN QUÉT MÃ QR SIÊU TỐC & CHÍNH XÁC KHỐI/LỚP
-    async function onQRScanned(maHS) {
-      maHS = String(maHS).trim();
-      if (!maHS) return;
+    async function onQRScanned(rawQR) {
+      if (!rawQR) return;
 
       if (html5QrcodeScanner) {
         try { html5QrcodeScanner.pause(true); } catch(e){}
       }
 
-      let studentObj = studentFastMap.get(maHS);
-      if (!studentObj) {
-        let { data } = await _supabase.from('hoc_sinh').select('ma_hs, ho_ten, ten_lop, khoi_id').eq('ma_hs', maHS).maybeSingle();
-        if (data) {
-          studentObj = { ma_hs: String(data.ma_hs).trim(), ho_ten: data.ho_ten, ten_lop: data.ten_lop || 'Chưa rõ', khoi_id: data.khoi_id || (data.ten_lop ? data.ten_lop.match(/\d+/)?.[0] : '10') };
-          studentFastMap.set(maHS, studentObj);
-        }
-      }
-
-      const hoTen = studentObj ? studentObj.ho_ten : 'Học Sinh Mã ' + maHS;
-      const lop = studentObj ? (studentObj.ten_lop || 'Chưa xếp lớp') : 'Chưa xếp lớp';
-      const khoi = studentObj ? (studentObj.khoi_id || (lop.match(/\d+/)?.[0] || '10')) : '10';
+      const parsed = parseQRData(rawQR);
+      const maHS = parsed.maHS;
+      const hoTen = parsed.hoTen;
+      const lop = parsed.lop;
+      const khoi = parsed.khoi;
 
       const actionRadio = document.querySelector('input[name="qr-action"]:checked');
       const action = actionRadio ? actionRadio.value : 'muon_khong_phep';
@@ -1032,10 +1066,15 @@
       const todayStr = formatDateToYYYYMMDD(new Date());
       const nowTimeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
+      // CẮT DỮ LIỆU CHỐNG LỖI CSDL CHARACTER VARYING(50)
+      const safeMaHS = String(maHS).slice(0, 30);
+      const safeHoTen = String(hoTen).slice(0, 50);
+      const safeLop = String(lop).slice(0, 20);
+
       try {
         const { data: existingRecords } = await _supabase.from('diem_danh_master')
           .select('id, trang_thai')
-          .eq('ma_hs', maHS)
+          .eq('ma_hs', safeMaHS)
           .eq('ngay_diem_danh', todayStr);
 
         const vangRecord = existingRecords ? existingRecords.find(r => String(r.trang_thai || '').toLowerCase().includes('vang')) : null;
@@ -1045,28 +1084,28 @@
             trang_thai: action,
             diem: diemVal,
             ma_hd: maHDVal,
-            chi_tiet: `[Chuyển VẮNG->MUỘN ${nowTimeStr}] ${actionText}`,
+            chi_tiet: `[Chuyển VẮNG->MUỘN ${nowTimeStr}] ${actionText}`.slice(0, 100),
             buoi: autoBuoi,
-            ten_nguoi_cap_nhat: currentUser ? currentUser.ho_ten : 'Cán bộ'
+            ten_nguoi_cap_nhat: currentUser ? String(currentUser.ho_ten).slice(0, 50) : 'Cán bộ'
           }).eq('id', vangRecord.id);
 
           if (updateErr) throw updateErr;
-          alert(`Học sinh ${hoTen} (Lớp ${lop}) trước đó báo VẮNG. Đã tự động đổi thành ĐI MUỘN lúc ${nowTimeStr}!`);
+          alert(`Học sinh ${safeHoTen} (Lớp ${safeLop}) trước đó báo VẮNG. Đã tự động đổi thành ĐI MUỘN lúc ${nowTimeStr}!`);
 
         } else {
           const { error: insertErr } = await _supabase.from('diem_danh_master').insert([{
-            ma_hs: maHS,
-            ho_ten: hoTen,
+            ma_hs: safeMaHS,
+            ho_ten: safeHoTen,
             khoi: String(khoi),
-            lop: lop,
+            lop: safeLop,
             ngay_diem_danh: todayStr,
             buoi: autoBuoi,
             trang_thai: action,
             ma_hd: maHDVal,
-            chi_tiet: `${actionText} (${nowTimeStr})`,
+            chi_tiet: `${actionText} (${nowTimeStr})`.slice(0, 100),
             diem: diemVal,
-            ma_nguoi_cap_nhat: currentUser ? currentUser.ma_cb : 'CB',
-            ten_nguoi_cap_nhat: currentUser ? currentUser.ho_ten : 'Cán bộ'
+            ma_nguoi_cap_nhat: currentUser ? String(currentUser.ma_cb).slice(0, 30) : 'CB',
+            ten_nguoi_cap_nhat: currentUser ? String(currentUser.ho_ten).slice(0, 50) : 'Cán bộ'
           }]);
 
           if (insertErr) throw insertErr;
@@ -1075,7 +1114,7 @@
         const logList = document.getElementById('qr-log-list');
         const logElem = document.createElement('div');
         logElem.className = "p-2 bg-green-50 border border-green-200 text-xs rounded-lg flex justify-between items-center";
-        logElem.innerHTML = `<div><strong>${hoTen} (${lop})</strong> - ${actionText}</div><span class="text-gray-400">${nowTimeStr}</span>`;
+        logElem.innerHTML = `<div><strong>${safeHoTen} (${safeLop})</strong> - ${actionText}</div><span class="text-gray-400">${nowTimeStr}</span>`;
         if (logList.querySelector('p')) logList.innerHTML = '';
         logList.prepend(logElem);
 
@@ -1092,7 +1131,8 @@
     function startQRScanner() {
       if (html5QrcodeScanner) return;
       html5QrcodeScanner = new Html5Qrcode("reader");
-      html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 230, height: 230 } }, onQRScanned).catch(err => alert("Lỗi Camera: " + err));
+      const config = { fps: 20, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
+      html5QrcodeScanner.start({ facingMode: "environment" }, config, onQRScanned).catch(err => alert("Lỗi Camera: " + err));
     }
     function stopQRScanner() { if (html5QrcodeScanner) { html5QrcodeScanner.stop().then(() => { html5QrcodeScanner.clear(); html5QrcodeScanner = null; }); } }
     function processManualQR() { const val = document.getElementById('manual-ma-hs').value.trim(); if(val) onQRScanned(val); }
@@ -1124,17 +1164,17 @@
         const isCoPhep = typeVal === 'co_phep';
 
         recordsToInsert.push({
-          ma_hs: maHS,
-          ho_ten: hoTen,
+          ma_hs: String(maHS).slice(0, 30),
+          ho_ten: String(hoTen).slice(0, 50),
           khoi: String(khoi),
-          lop: lop,
+          lop: String(lop).slice(0, 20),
           ngay_diem_danh: formatDateToYYYYMMDD(new Date()),
           buoi: buoiVal,
           trang_thai: isCoPhep ? 'vang_co_phep' : 'vang_khong_phep',
           ma_hd: isCoPhep ? 'HD03a' : 'HD03b',
           chi_tiet: `Vắng ${isCoPhep ? 'Có phép (-2đ)' : 'Không phép (-4đ)'}`,
           diem: isCoPhep ? -2.0 : -4.0,
-          ten_nguoi_cap_nhat: currentUser ? currentUser.ho_ten : 'Admin'
+          ten_nguoi_cap_nhat: currentUser ? String(currentUser.ho_ten).slice(0, 50) : 'Admin'
         });
       });
 
@@ -1182,17 +1222,17 @@
 
       try {
         const { error } = await _supabase.from('diem_danh_master').insert([{
-          ma_hs: maHS,
-          ho_ten: hoTen,
+          ma_hs: String(maHS).slice(0, 30),
+          ho_ten: String(hoTen).slice(0, 50),
           khoi: String(khoi),
-          lop: lop,
+          lop: String(lop).slice(0, 20),
           ngay_diem_danh: formatDateToYYYYMMDD(new Date()),
           buoi: buoiVal,
           trang_thai: loaiDiem === 'cong' ? 'diem_thuong' : 'diem_tru',
           ma_hd: maHD,
-          chi_tiet: ghiChu ? `[${maHD}] ${tenHD} (${ghiChu})` : `[${maHD}] ${tenHD}`,
+          chi_tiet: ghiChu ? `[${maHD}] ${tenHD} (${ghiChu})`.slice(0, 100) : `[${maHD}] ${tenHD}`.slice(0, 100),
           diem: diemSo,
-          ten_nguoi_cap_nhat: currentUser ? currentUser.ho_ten : 'Admin'
+          ten_nguoi_cap_nhat: currentUser ? String(currentUser.ho_ten).slice(0, 50) : 'Admin'
         }]);
 
         if (error) throw error;
