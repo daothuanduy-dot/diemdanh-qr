@@ -22,7 +22,7 @@
 
   <div class="max-w-6xl mx-auto space-y-4">
     
-    <!-- CẢNH BÁO LỖI KẾT NỐI (NẾU CÓ) -->
+    <!-- CẢNH BÁO LỖI KẾT NỐI (HIỂN THỊ NẾU CÓ LỖI TỪ SUPABASE) -->
     <div id="connection-error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl font-semibold text-sm"></div>
 
     <!-- HEADER -->
@@ -329,9 +329,9 @@
   </div>
 
   <script>
-    // 1. KẾT NỐI SUPABASE
+    // 1. KẾT NỐI SUPABASE - ĐÃ CẬP NHẬT API KEY CHUẨN JWT MỚI
     const SUPABASE_URL = "https://vbhtgkvvmwfztswxlvnl.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_5imLFI2Ey7Gi3mOfp2brFg_3zBU_pOZ";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiaHRna3Z2bXdmenRzd3hsdm5sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwMjE2MzgsImV4cCI6MjEwNjU5NzYzOH0.CqsEoBOVB4CS9UphogsIRtR1syY82kx5uzvcz_K_luo";
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let allLopList = []; 
@@ -340,14 +340,14 @@
     let html5QrcodeScanner = null;
     let pendingQRData = null;
 
-    // 2. KHỞI TẠO TỰ ĐỘNG KHỔNG PHỤ THUỘC VÀO TỐC ĐỘ MẠNG
+    // 2. KHỞI TẠO TỰ ĐỘNG
     document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById('tk-ngay').valueAsDate = new Date();
       await fetchAllClasses();
       await fetchDanhMucDiem();
     });
 
-    // 3. THUẬT TOÁN LẤY LỚP TỰ ĐỘNG BÓC TÁCH KHỐI DÙ CSDL CÓ BỊ LỖI KHOI_ID HAY KHÔNG
+    // 3. TẢI DANH SÁCH LỚP
     async function fetchAllClasses() {
       showLoadingStateInDropdowns('Đang tải danh sách lớp...');
 
@@ -355,7 +355,7 @@
         let { data, error } = await _supabase.from('lop').select('ten_lop, khoi_id').order('ten_lop', { ascending: true });
 
         if (error) {
-          showConnectionError("Lỗi kết nối CSDL Supabase: " + error.message + ". Vui lòng kiểm tra API Key.");
+          showConnectionError("Lỗi kết nối CSDL Supabase: " + error.message);
           return;
         }
 
@@ -371,7 +371,6 @@
           const cleanLop = String(rawLop).trim();
           if (!cleanLop) return;
 
-          // Tự động bóc tách số khối từ Tên Lớp (VD: '10A1' -> '10', '11B2' -> '11', '12C3' -> '12')
           const digits = cleanLop.match(/\d+/);
           const detectedKhoi = digits ? digits[0] : '10';
 
@@ -384,10 +383,13 @@
           a.ten_lop.localeCompare(b.ten_lop, 'vi', { numeric: true })
         );
 
-        // Nạp ngay danh sách lớp vào toàn bộ các Dropdown trên giao diện
+        // Nạp danh sách lớp vào toàn bộ Dropdown
         populateLopDropdown('bv-khoi', 'bv-lop');
         populateLopDropdown('cd-khoi', 'cd-lop');
         populateLopDropdown('tk-khoi', 'tk-lop');
+
+        // Ẩn bảng thông báo lỗi nếu tải thành công
+        document.getElementById('connection-error').classList.add('hidden');
 
       } catch (err) {
         showConnectionError("Lỗi không xác định khi tải dữ liệu: " + err.message);
@@ -422,7 +424,6 @@
         const cleanLop = String(item.ten_lop || '').trim();
         const cleanKhoi = String(item.khoi_id || '').trim();
 
-        // Khớp nếu khoi_id bằng, hoặc tên lớp bắt đầu bằng số khối (VD: '10A1' khớp '10')
         return cleanKhoi === khoiVal || cleanLop.startsWith(khoiVal);
       });
 
