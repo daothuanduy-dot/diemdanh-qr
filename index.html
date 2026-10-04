@@ -105,14 +105,15 @@
         </div>
       </section>
 
-      <!-- TAB 1: BÁO VẮNG -->
+      <!-- TAB 1: BÁO VẮNG (ĐÃ CẬP NHẬT THEO YÊU CẦU) -->
       <section id="content-tab-1" class="tab-content hidden space-y-4">
-        <h2 class="text-lg font-bold text-blue-700 uppercase">1. Báo Học Sinh Vắng Trong Ngày</h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <h2 class="text-lg font-bold text-blue-700 uppercase flex items-center gap-2"><i class="fa-solid fa-user-slash"></i> 1. Báo Học Sinh Vắng Trong Ngày</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
           <div>
             <label class="block text-xs font-bold text-gray-700 mb-1">Chọn Khối:</label>
-            <select id="bv-khoi" onchange="handleKhoiChange('bv-khoi', 'bv-lop')" class="w-full border p-2.5 rounded-lg text-sm bg-gray-50">
-              <option value="">Tất cả các Khối</option>
+            <select id="bv-khoi" onchange="handleBaoVangKhoiChange()" class="w-full border p-2.5 rounded-lg text-sm bg-white font-medium">
+              <option value="">-- Tất cả Khối --</option>
               <option value="10">Khối 10</option>
               <option value="11">Khối 11</option>
               <option value="12">Khối 12</option>
@@ -120,16 +121,27 @@
           </div>
           <div>
             <label class="block text-xs font-bold text-gray-700 mb-1">Chọn Lớp:</label>
-            <select id="bv-lop" class="w-full border p-2.5 rounded-lg text-sm bg-gray-50">
+            <select id="bv-lop" onchange="renderBaoVangRows()" class="w-full border p-2.5 rounded-lg text-sm bg-white font-medium">
               <option value="">-- Chọn Lớp --</option>
             </select>
           </div>
           <div>
             <label class="block text-xs font-bold text-gray-700 mb-1">Số lượng vắng:</label>
-            <input type="number" id="bv-soluong" value="1" min="1" class="w-full border p-2.5 rounded-lg text-sm font-semibold text-center">
+            <input type="number" id="bv-soluong" value="1" min="1" max="20" onchange="renderBaoVangRows()" oninput="renderBaoVangRows()" class="w-full border p-2.5 rounded-lg text-sm font-bold text-center bg-white text-blue-600">
           </div>
         </div>
-        <button onclick="submitBaoVang()" class="w-full btn-coral py-3 rounded-lg font-bold text-center tracking-wide uppercase shadow-sm hover:opacity-95">LƯU THÔNG TIN BÁO VẮNG</button>
+
+        <!-- DANH SÁCH HỌC SINH VẮNG ĐƯỢC TẠO TỰ ĐỘNG -->
+        <div class="space-y-3">
+          <label class="block font-bold text-gray-700 text-sm">Danh sách chi tiết học sinh vắng:</label>
+          <div id="bv-student-rows" class="space-y-3">
+            <p class="text-sm text-gray-400 italic bg-gray-50 p-4 rounded-xl border text-center">Vui lòng chọn Lớp để chọn danh sách học sinh vắng.</p>
+          </div>
+        </div>
+
+        <button onclick="submitBaoVang()" class="w-full btn-coral py-3 rounded-xl font-bold text-center tracking-wide uppercase shadow-md hover:opacity-95 transition-all text-base mt-2">
+          <i class="fa-solid fa-floppy-disk"></i> LƯU THÔNG TIN BÁO VẮNG
+        </button>
       </section>
 
       <!-- TAB 2: CHẤM ĐIỂM THI ĐUA -->
@@ -279,13 +291,14 @@
     const SUPABASE_KEY = "sb_publishable_5imLFI2Ey7Gi3mOfp2brFg_3zBU_pOZ";
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // 2. DỮ LIỆU MẪU DỰ PHÒNG (NẾU KẾT NỐI SUPABASE BỊ LỖI RLS)
+    // 2. DỮ LIỆU MẪU DỰ PHÒNG (CÓ BỔ SUNG NGÀY SINH)
     const DEFAULT_STUDENTS = [
-      { ma_hs: "3160915353", ho_ten: "Nguyễn Quang Minh Sơn", khoi: "10", lop: "10A1" },
-      { ma_hs: "3160915354", ho_ten: "Trần Văn An", khoi: "10", lop: "10A2" },
-      { ma_hs: "3160915355", ho_ten: "Lê Thị Bích", khoi: "11", lop: "11A1" },
-      { ma_hs: "3160915356", ho_ten: "Phạm Quốc Cường", khoi: "11", lop: "11A2" },
-      { ma_hs: "3160915357", ho_ten: "Đào Thuận Duy", khoi: "12", lop: "12A1" }
+      { ma_hs: "3160915353", ho_ten: "Nguyễn Quang Minh Sơn", khoi: "10", lop: "10A1", ngay_sinh: "15/08/2008" },
+      { ma_hs: "3160915354", ho_ten: "Trần Văn An", khoi: "10", lop: "10A1", ngay_sinh: "20/03/2008" },
+      { ma_hs: "3160915359", ho_ten: "Trần Văn An", khoi: "10", lop: "10A1", ngay_sinh: "14/10/2008" }, // Ví dụ trùng tên cùng lớp
+      { ma_hs: "3160915355", ho_ten: "Lê Thị Bích", khoi: "11", lop: "11A1", ngay_sinh: "12/11/2007" },
+      { ma_hs: "3160915356", ho_ten: "Phạm Quốc Cường", khoi: "11", lop: "11A2", ngay_sinh: "05/01/2007" },
+      { ma_hs: "3160915357", ho_ten: "Đào Thuận Duy", khoi: "12", lop: "12A1", ngay_sinh: "02/09/2006" }
     ];
 
     let currentUser = { ho_ten: "Đào Thuận Duy", vai_tro: "Admin" };
@@ -300,12 +313,12 @@
       await fetchDanhMucDiem();
     });
 
-    // 4. LẤY DANH SÁCH HỌC SINH (KÈM KHẮC PHỤC LỖI KHÔNG LOẠI TRỪ DỮ LIỆU)
+    // 4. LẤY DANH SÁCH HỌC SINH TỪ CSDL SUPABASE
     async function fetchStudentsData() {
       try {
         const { data, error } = await _supabase.from('danh_sach').select('*');
         if (error || !data || data.length === 0) {
-          console.warn("Chuyển sang Dữ liệu dự phòng do Supabase RLS chưa tắt.");
+          console.warn("Chuyển sang Dữ liệu dự phòng.");
           studentList = DEFAULT_STUDENTS;
         } else {
           studentList = data;
@@ -314,11 +327,12 @@
         studentList = DEFAULT_STUDENTS;
       }
       populateAllLopDropdowns();
+      handleBaoVangKhoiChange(); // Khởi tạo dropdown Báo vắng
     }
 
     // Nạp toàn bộ Lớp vào các ô Select
     function populateAllLopDropdowns() {
-      const lopSelectIds = ['bv-lop', 'cd-lop', 'tk-lop'];
+      const lopSelectIds = ['cd-lop', 'tk-lop'];
       const allClasses = [...new Set(studentList.map(s => String(s.lop || s.lop_hoc || '').trim()).filter(Boolean))].sort();
 
       lopSelectIds.forEach(id => {
@@ -331,7 +345,156 @@
       });
     }
 
-    // Lọc lớp linh hoạt theo Khối
+    // --- XỬ LÝ CHUYÊN BIỆT CHO TAB 1: BÁO VẮNG ---
+
+    // Lọc lớp theo khối ở Tab Báo Vắng
+    function handleBaoVangKhoiChange() {
+      const khoiVal = document.getElementById('bv-khoi').value;
+      const lopSelect = document.getElementById('bv-lop');
+      if (!lopSelect) return;
+
+      lopSelect.innerHTML = '<option value="">-- Chọn Lớp --</option>';
+
+      let filteredClasses = [];
+      if (!khoiVal) {
+        filteredClasses = [...new Set(studentList.map(s => String(s.lop || s.lop_hoc || '').trim()).filter(Boolean))].sort();
+      } else {
+        filteredClasses = [...new Set(
+          studentList.filter(s => {
+            const k = String(s.khoi || '').trim();
+            const l = String(s.lop || s.lop_hoc || '').trim();
+            return k === String(khoiVal) || l.startsWith(String(khoiVal));
+          }).map(s => String(s.lop || s.lop_hoc || '').trim()).filter(Boolean)
+        )].sort();
+      }
+
+      filteredClasses.forEach(lop => {
+        lopSelect.innerHTML += `<option value="${lop}">${lop}</option>`;
+      });
+
+      renderBaoVangRows(); // Cập nhật lại giao diện hàng học sinh
+    }
+
+    // Sinh ra số hàng tương ứng với số học sinh vắng đã nhập
+    function renderBaoVangRows() {
+      const lopVal = document.getElementById('bv-lop').value;
+      const count = parseInt(document.getElementById('bv-soluong').value) || 0;
+      const container = document.getElementById('bv-student-rows');
+
+      container.innerHTML = '';
+
+      if (!lopVal) {
+        container.innerHTML = '<p class="text-sm text-gray-400 italic bg-gray-50 p-4 rounded-xl border text-center">Vui lòng chọn Lớp để chọn danh sách học sinh vắng.</p>';
+        return;
+      }
+
+      if (count <= 0) {
+        container.innerHTML = '<p class="text-sm text-amber-600 bg-amber-50 p-3 rounded-xl border border-amber-200">Số lượng học sinh vắng phải lớn hơn 0.</p>';
+        return;
+      }
+
+      // Lọc danh sách học sinh thuộc lớp đang chọn
+      const classStudents = studentList.filter(s => String(s.lop || s.lop_hoc || '').trim() === String(lopVal));
+
+      if (classStudents.length === 0) {
+        container.innerHTML = '<p class="text-sm text-red-500 bg-red-50 p-3 rounded-xl border border-red-200">Không tìm thấy dữ liệu học sinh trong lớp này.</p>';
+        return;
+      }
+
+      // Tạo N hàng tương ứng
+      for (let i = 0; i < count; i++) {
+        let optionsHTML = '<option value="">-- Chọn Học Sinh Vắng --</option>';
+        
+        classStudents.forEach(s => {
+          const ngaySinhText = s.ngay_sinh ? ` [NS: ${s.ngay_sinh}]` : '';
+          optionsHTML += `<option value="${s.ma_hs}">${s.ho_ten}${ngaySinhText} - (Mã: ${s.ma_hs})</option>`;
+        });
+
+        const rowHTML = `
+          <div class="bv-row bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm">
+            <div class="flex items-center gap-2 flex-1">
+              <span class="font-bold text-blue-600 bg-blue-100 rounded-lg px-2.5 py-1 text-xs">HS ${i + 1}</span>
+              <select class="bv-student-select border p-2 rounded-lg text-sm w-full bg-white font-medium text-gray-800 focus:ring-2 focus:ring-blue-400 outline-none">
+                ${optionsHTML}
+              </select>
+            </div>
+            <div class="flex items-center gap-4 bg-white px-3 py-1.5 rounded-lg border border-gray-200 justify-end">
+              <label class="flex items-center gap-1.5 text-xs font-bold text-emerald-700 cursor-pointer">
+                <input type="radio" name="bv_type_${i}" value="co_phep" checked class="w-4 h-4 text-emerald-600">
+                Có phép
+              </label>
+              <label class="flex items-center gap-1.5 text-xs font-bold text-red-600 cursor-pointer">
+                <input type="radio" name="bv_type_${i}" value="khong_phep" class="w-4 h-4 text-red-600">
+                Không phép
+              </label>
+            </div>
+          </div>
+        `;
+        container.innerHTML += rowHTML;
+      }
+    }
+
+    // Lưu thông tin báo vắng vào CSDL Supabase
+    async function submitBaoVang() {
+      const lop = document.getElementById('bv-lop').value;
+      if (!lop) return alert("Vui lòng chọn Lớp!");
+
+      const rows = document.querySelectorAll('.bv-row');
+      if (rows.length === 0) return alert("Vui lòng kiểm tra lại danh sách học sinh vắng!");
+
+      const recordsToInsert = [];
+      let isValid = true;
+      const selectedStudentsSet = new Set();
+
+      rows.forEach((row, index) => {
+        const selectElem = row.querySelector('.bv-student-select');
+        const maHS = selectElem.value;
+        const typeRadio = row.querySelector(`input[name="bv_type_${index}"]:checked`);
+        const typeVal = typeRadio ? typeRadio.value : 'co_phep';
+
+        if (!maHS) {
+          isValid = false;
+          return;
+        }
+
+        if (selectedStudentsSet.has(maHS)) {
+          alert(`Học sinh ở hàng số ${index + 1} bị chọn trùng lặp với hàng trước! Vui lòng kiểm tra lại.`);
+          isValid = false;
+          return;
+        }
+        selectedStudentsSet.add(maHS);
+
+        const studentObj = studentList.find(s => String(s.ma_hs) === String(maHS));
+        const tenHS = studentObj ? studentObj.ho_ten : maHS;
+        const ngaySinhText = studentObj && studentObj.ngay_sinh ? ` (${studentObj.ngay_sinh})` : '';
+
+        recordsToInsert.push({
+          ma_hs: maHS,
+          ngay_diem_danh: new Date().toISOString().split('T')[0],
+          trang_thai: typeVal === 'co_phep' ? 'vang_co_phep' : 'vang_khong_phep',
+          chi_tiet: `Vắng ${typeVal === 'co_phep' ? 'Có phép' : 'Không phép'} - HS: ${tenHS}${ngaySinhText}`,
+          ma_nguoi_cap_nhat: currentUser.ho_ten
+        });
+      });
+
+      if (!isValid) {
+        if (selectedStudentsSet.size === rows.length) {
+          alert("Vui lòng chọn đầy đủ tên cho tất cả các học sinh vắng trong danh sách!");
+        }
+        return;
+      }
+
+      try {
+        await _supabase.from('diem_danh_master').insert(recordsToInsert);
+      } catch (e) {
+        console.error("Lỗi lưu:", e);
+      }
+
+      alert(`Lưu thành công thông tin báo vắng cho ${recordsToInsert.length} học sinh Lớp ${lop}!`);
+    }
+
+    // --- HÀM XỬ LÝ CHUNG ---
+
     function handleKhoiChange(khoiElemId, lopElemId, studentElemId = null) {
       const khoiVal = document.getElementById(khoiElemId).value;
       const lopSelect = document.getElementById(lopElemId);
@@ -361,7 +524,6 @@
       });
     }
 
-    // Lắng nghe chọn Lớp để đổi danh sách học sinh
     function handleLopChange(lopElemId, studentElemId) {
       const lopVal = document.getElementById(lopElemId).value;
       const studentSelect = document.getElementById(studentElemId);
@@ -374,7 +536,8 @@
 
       const filteredStudents = studentList.filter(s => String(s.lop || s.lop_hoc || '').trim() === String(lopVal));
       filteredStudents.forEach(s => {
-        studentSelect.innerHTML += `<option value="${s.ma_hs}">${s.ho_ten} (${s.ma_hs})</option>`;
+        const ns = s.ngay_sinh ? ` [${s.ngay_sinh}]` : '';
+        studentSelect.innerHTML += `<option value="${s.ma_hs}">${s.ho_ten}${ns} - (${s.ma_hs})</option>`;
       });
     }
 
@@ -482,25 +645,6 @@
       }
     }
 
-    // 6. CÁC TÍNH NĂNG KHÁC
-    async function submitBaoVang() {
-      const lop = document.getElementById('bv-lop').value;
-      const soluong = document.getElementById('bv-soluong').value;
-      if (!lop) return alert("Vui lòng chọn Lớp!");
-
-      try {
-        await _supabase.from('diem_danh_master').insert([{
-          ma_hs: `LOP_${lop}`,
-          ngay_diem_danh: new Date().toISOString().split('T')[0],
-          trang_thai: 'bao_vang',
-          chi_tiet: `Vắng ${soluong} học sinh`,
-          ma_nguoi_cap_nhat: currentUser.ho_ten
-        }]);
-      } catch (e) {}
-
-      alert(`Đã lưu thông tin báo vắng Lớp ${lop} (${soluong} HS) thành công!`);
-    }
-
     async function submitChamDiem() {
       const lop = document.getElementById('cd-lop').value;
       const doiTuong = document.getElementById('cd-hocsinh').value;
@@ -527,7 +671,7 @@
       try {
         const { data } = await _supabase.from('diem_danh_master').select('*');
         if (data && data.length > 0) {
-          const vpCount = data.filter(d => d.trang_thai.includes('muon') || d.trang_thai === 'diem_tru').length;
+          const vpCount = data.filter(d => d.trang_thai.includes('muon') || d.trang_thai === 'diem_tru' || d.trang_thai.includes('vang')).length;
           const congCount = data.filter(d => d.trang_thai === 'diem_thuong').length;
           const truCount = data.filter(d => d.trang_thai === 'diem_tru' || d.trang_thai.includes('muon')).length;
 
