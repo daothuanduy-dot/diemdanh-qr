@@ -18,6 +18,7 @@
     #reader video { border-radius: 12px; object-fit: cover; }
     tr.clickable-row { cursor: pointer; transition: background-color 0.15s; }
     tr.clickable-row:hover { background-color: #eef6ff !important; }
+    optgroup { font-weight: bold; color: #1e40af; background-color: #f1f5f9; }
   </style>
 </head>
 <body class="p-3 md:p-6 min-h-screen">
@@ -183,41 +184,60 @@
       <!-- TAB 2: CHẤM ĐIỂM THI ĐUA -->
       <section id="content-tab-2" class="tab-content hidden space-y-4">
         <div class="flex justify-between items-center">
-          <h2 class="text-lg font-bold text-emerald-800 uppercase flex items-center gap-2"><i class="fa-solid fa-pen-to-square"></i> 2. Chấm Điểm Cộng / Trừ Thi Đua</h2>
-          <span id="tab2-selected-status" class="bg-gray-100 text-gray-500 text-xs px-3 py-1 rounded-full font-bold">Chưa chọn lớp</span>
+          <h2 class="text-lg font-bold text-emerald-800 uppercase flex items-center gap-2"><i class="fa-solid fa-pen-to-square"></i> 2. Chấm Điểm Thi Đua (Linh Hoạt & Tiêu Chí)</h2>
+          <span id="tab2-selected-status" class="bg-gray-100 text-gray-500 text-xs px-3 py-1 rounded-full font-bold">Chưa chọn đối tượng</span>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- BỘ LỌC ĐỐI TƯỢNG: PHÂN BIỆT CÁ NHÂN VÀ TẬP THỂ -->
+        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
           <div>
-            <label class="block text-xs font-bold text-gray-700 mb-1">Chọn Khối:</label>
-            <select id="cd-khoi" onchange="onChamDiemKhoiChange()" class="w-full border p-2.5 rounded-lg text-sm bg-gray-50">
-              <option value="">Tất cả các Khối</option>
-              <option value="10">Khối 10</option>
-              <option value="11">Khối 11</option>
-              <option value="12">Khối 12</option>
-            </select>
+            <label class="block text-xs font-bold text-gray-700 mb-1">1. Phạm Vi Chấm Điểm:</label>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="flex items-center justify-center gap-2 border bg-white p-2.5 rounded-lg cursor-pointer font-bold text-sm hover:border-blue-500">
+                <input type="radio" name="cd-scope-type" value="tap_the" checked onchange="onChamDiemScopeTypeChange()"> 🏛️ Chấm Cho Tập Thể (Cả Lớp)
+              </label>
+              <label class="flex items-center justify-center gap-2 border bg-white p-2.5 rounded-lg cursor-pointer font-bold text-sm hover:border-blue-500">
+                <input type="radio" name="cd-scope-type" value="ca_nhan" onchange="onChamDiemScopeTypeChange()"> 👤 Chấm Cho Cá Nhân Học Sinh
+              </label>
+            </div>
           </div>
-          <div>
-            <label class="block text-xs font-bold text-gray-700 mb-1">Chọn Lớp:</label>
-            <select id="cd-lop" onchange="onChamDiemLopChange()" class="w-full border p-2.5 rounded-lg text-sm bg-gray-50">
-              <option value="">-- Chọn Lớp --</option>
-            </select>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-gray-700 mb-1">Chọn Khối:</label>
+              <select id="cd-khoi" onchange="onChamDiemKhoiChange()" class="w-full border p-2.5 rounded-lg text-sm bg-white font-medium">
+                <option value="">Tất cả các Khối</option>
+                <option value="10">Khối 10</option>
+                <option value="11">Khối 11</option>
+                <option value="12">Khối 12</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-700 mb-1">Chọn Lớp:</label>
+              <select id="cd-lop" onchange="onChamDiemLopChange()" class="w-full border p-2.5 rounded-lg text-sm bg-white font-medium">
+                <option value="">-- Chọn Lớp --</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-700 mb-1">Buổi ghi nhận (Tự động):</label>
+              <input type="text" id="cd-buoi-auto" readonly class="w-full border p-2.5 rounded-lg text-sm bg-gray-100 font-bold text-blue-700">
+            </div>
           </div>
-          <div>
-            <label class="block text-xs font-bold text-gray-700 mb-1">Buổi ghi nhận (Tự động):</label>
-            <input type="text" id="cd-buoi-auto" readonly class="w-full border p-2.5 rounded-lg text-sm bg-gray-100 font-bold text-blue-700">
+
+          <!-- MỤC CHỌN CÁ NHÂN (CHỈ HIỆN KHU CHỌN CÁ NHÂN) -->
+          <div id="box-cd-canhan" class="hidden space-y-2 pt-2 border-t border-slate-200">
+            <div class="flex flex-col md:flex-row justify-between md:items-center gap-2">
+              <label class="text-xs font-bold text-gray-700">Chọn Cá Nhân Học Sinh (Họ và Tên - Ngày Sinh):</label>
+              <input type="text" id="cd-search-student-input" oninput="filterStudentSelectOptions()" placeholder="🔍 Gõ tên hoặc chữ cái đầu (VD: nha -> Nguyễn Hữu An)..." class="border p-2 rounded-lg text-xs w-full md:w-80 bg-white shadow-sm font-normal">
+            </div>
+            <select id="cd-hocsinh" class="w-full border p-2.5 rounded-lg text-sm bg-white font-medium text-gray-800">
+              <option value="">-- Chọn Lớp trước để hiển thị danh sách học sinh --</option>
+            </select>
           </div>
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-gray-700 mb-1">Chọn Đối Tượng Chấm:</label>
-          <select id="cd-hocsinh" class="w-full border p-2.5 rounded-lg text-sm bg-gray-50">
-            <option value="CALOP">-- Cả Lớp --</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-xs font-bold text-gray-700 mb-2">Lựa Chọn Loại Điểm:</label>
+          <label class="block text-xs font-bold text-gray-700 mb-2">2. Lựa Chọn Loại Điểm:</label>
           <div class="grid grid-cols-2 gap-3">
             <label class="flex items-center justify-center gap-2 border border-red-300 bg-red-50 text-red-600 p-3 rounded-xl cursor-pointer font-bold text-sm">
               <input type="radio" name="loai-diem" value="tru" checked onchange="filterDanhMucDiem()"> Điểm Trừ (Lỗi vi phạm)
@@ -228,26 +248,43 @@
           </div>
         </div>
 
-        <div>
-          <div class="flex justify-between items-center mb-1">
-            <label class="text-xs font-bold text-gray-700">Nội Dung Tiêu Chí Chấm Điểm:</label>
-            <span id="tc-count-badge" class="text-[11px] bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full">Tải dữ liệu...</span>
+        <!-- MẢNG THI ĐUA VÀ BỘ LỌC TIÊU CHÍ -->
+        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-gray-700 mb-1">Lọc Theo Mảng Thi Đua:</label>
+              <select id="cd-mang-filter" onchange="filterDanhMucDiem()" class="w-full border p-2 rounded-lg text-sm bg-white font-bold text-blue-800">
+                <option value="">-- Tất cả các Mảng Thi Đua --</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-700 mb-1">Tìm Kiếm Nhanh Tiêu Chí (Chữ cái đầu/Nội dung):</label>
+              <input type="text" id="cd-search-tc-input" oninput="filterDanhMucDiem()" placeholder="🔍 Gõ chữ cái đầu hoặc từ khóa tiêu chí..." class="w-full border p-2 rounded-lg text-sm bg-white">
+            </div>
           </div>
-          <select id="list-danh-muc-diem" onchange="toggleCustomPointInput()" class="w-full border p-2.5 rounded-lg text-sm bg-white font-medium text-gray-800">
-            <option value="">-- Đang tải danh mục tiêu chí... --</option>
-          </select>
+
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <label class="text-xs font-bold text-gray-700">3. Nội Dung Tiêu Chí Chấm Điểm (Xếp theo Mảng Thi Đua):</label>
+              <span id="tc-count-badge" class="text-[11px] bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full">Tải dữ liệu...</span>
+            </div>
+            <select id="list-danh-muc-diem" onchange="toggleCustomPointInput()" class="w-full border p-2.5 rounded-lg text-sm bg-white font-medium text-gray-800">
+              <option value="">-- Đang tải danh mục tiêu chí... --</option>
+            </select>
+          </div>
         </div>
 
+        <!-- MỤC CHẤM ĐIỂM LINH HOẠT -->
         <div id="custom-point-box" class="hidden bg-amber-50 p-4 rounded-xl border border-amber-200 space-y-3">
           <h4 class="text-xs font-bold text-amber-800 uppercase flex items-center gap-1"><i class="fa-solid fa-pen"></i> Chấm Điểm Linh Hoạt</h4>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div class="md:col-span-2">
-              <label class="block text-xs font-bold text-gray-600 mb-1">Tên Tiêu Chí / Nội Dung:</label>
-              <input type="text" id="custom-ten-hd" placeholder="VD: Vi phạm nói tục, Nhặt được của rơi..." class="w-full border p-2 rounded-lg text-sm bg-white">
+              <label class="block text-xs font-bold text-gray-600 mb-1">Tên Tiêu Chí / Nội Dung Linh Hoạt:</label>
+              <input type="text" id="custom-ten-hd" placeholder="VD: Tham gia văn nghệ, Vi phạm nói tục..." class="w-full border p-2 rounded-lg text-sm bg-white">
             </div>
             <div>
               <label class="block text-xs font-bold text-gray-600 mb-1">Số Điểm Cộng / Trừ:</label>
-              <input type="number" step="0.25" id="custom-diem" placeholder="VD: 5 hoặc -3" class="w-full border p-2 rounded-lg text-sm bg-white font-bold text-center">
+              <input type="number" step="0.25" id="custom-diem" placeholder="VD: 0.5 hoặc -2" class="w-full border p-2 rounded-lg text-sm bg-white font-bold text-center">
             </div>
           </div>
         </div>
@@ -398,6 +435,7 @@
           <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
             <h3 class="font-bold text-emerald-800 text-sm uppercase flex items-center gap-2">
               <i class="fa-solid fa-graduation-cap text-emerald-600"></i> Bảng Thống Kê & Xếp Hạng Học Sinh
+              <span class="text-xs text-gray-500 font-normal italic">(Tiêu chí phụ khi bằng điểm: Điểm Thi Đua Tập Thể Lớp)</span>
             </h3>
             <div class="flex items-center gap-2">
               <label class="text-xs font-bold text-gray-600">Chế độ xem:</label>
@@ -422,11 +460,12 @@
                   <th class="p-2.5 text-center">Cộng</th>
                   <th class="p-2.5 text-center">Trừ</th>
                   <th class="p-2.5 text-center">Tổng Điểm</th>
+                  <th class="p-2.5 text-center">Lớp Thuộc Về</th>
                   <th class="p-2.5 text-center">Chi Tiết</th>
                 </tr>
               </thead>
               <tbody id="hs-rank-table-body">
-                <tr><td colspan="10" class="p-4 text-center text-gray-400 bg-gray-50">Nhấn "LỌC & THỐNG KÊ DỮ LIỆU" để xem danh sách...</td></tr>
+                <tr><td colspan="11" class="p-4 text-center text-gray-400 bg-gray-50">Nhấn "LỌC & THỐNG KÊ DỮ LIỆU" để xem danh sách...</td></tr>
               </tbody>
             </table>
           </div>
@@ -816,6 +855,24 @@
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
 
+    // THUẬT TOÁN TÌM KIẾM THEO CHỮ CÁI ĐẦU & TỪ KHÓA ĐA NĂNG
+    function removeAccents(str) {
+      if (!str) return '';
+      return String(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                .replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase();
+    }
+    function getInitials(str) {
+      if (!str) return '';
+      return removeAccents(str).split(/\s+/).map(w => w[0]).join('');
+    }
+    function matchSearchKeyword(sourceText, keyword) {
+      if (!keyword) return true;
+      const cleanSource = removeAccents(sourceText);
+      const cleanKw = removeAccents(keyword).trim();
+      const initials = getInitials(sourceText);
+      return cleanSource.includes(cleanKw) || initials.includes(cleanKw.replace(/\s+/g, ''));
+    }
+
     // 2. KHỞI TẠO VÀ XÁC THỰC ĐĂNG NHẬP CAN_BO
     document.addEventListener("DOMContentLoaded", async () => {
       checkCanBoSession();
@@ -858,9 +915,7 @@
       document.getElementById('login-overlay').classList.remove('hidden');
     }
 
-    function openLoginOverlay() {
-      document.getElementById('login-overlay').classList.remove('hidden');
-    }
+    function openLoginOverlay() { document.getElementById('login-overlay').classList.remove('hidden'); }
 
     async function performCanBoLogin() {
       const inputVal = document.getElementById('login-user-input').value.trim();
@@ -871,17 +926,15 @@
       if (!inputVal || !passVal) return alert("Vui lòng nhập đầy đủ Tên đăng nhập và Mật khẩu!");
 
       try {
-        let { data, error } = await _supabase.from('can_bo').select('*');
+        let { data } = await _supabase.from('can_bo').select('*');
         let matched = null;
 
         if (data && data.length > 0) {
           matched = data.find(c => {
             const dbUser = String(c.ma_cb || c.ma_can_bo || c.ten_dang_nhap || '').toLowerCase();
             const dbPass = String(c.mat_khau || c.password || c.pass || '');
-            
             const isUserMatch = dbUser === inputVal.toLowerCase() || String(c.ho_ten || '').toLowerCase() === inputVal.toLowerCase();
             const isPassMatch = !dbPass || dbPass === passVal;
-
             return isUserMatch && isPassMatch;
           });
         }
@@ -890,10 +943,7 @@
           matched = { ho_ten: "Đào Thuận Duy (Admin)", vai_tro: "Admin", ma_cb: "ADMIN" };
         }
 
-        if (!matched) {
-          errBox.classList.remove('hidden');
-          return;
-        }
+        if (!matched) { errBox.classList.remove('hidden'); return; }
 
         currentUser = {
           ma_cb: matched.ma_cb || matched.ma_can_bo || inputVal,
@@ -905,7 +955,6 @@
         document.getElementById('user-name').innerText = currentUser.ho_ten;
         document.getElementById('user-role').innerText = currentUser.vai_tro;
         document.getElementById('login-overlay').classList.add('hidden');
-
         document.getElementById('btn-header-login').classList.add('hidden');
         document.getElementById('btn-header-logout').classList.remove('hidden');
 
@@ -914,16 +963,14 @@
 
     function handleLogout() {
       if (confirm("Xác nhận ĐĂNG XUẤT khỏi hệ thống triệt để?")) {
-        localStorage.clear();
-        sessionStorage.clear();
-        window.location.reload();
+        localStorage.clear(); sessionStorage.clear(); window.location.reload();
       }
     }
 
-    // 3. TẢI CSDL HỌC SINH VÀ ĐỆM BỘ NHỚ FAST-MAP $O(1)$
+    // 3. TẢI CSDL HỌC SINH CÓ THÔNG TIN NGÀY SINH LÀM ĐỆM $O(1)$
     async function fetchAllStudents() {
       try {
-        const { data } = await _supabase.from('hoc_sinh').select('ma_hs, ho_ten, ten_lop, khoi_id');
+        const { data } = await _supabase.from('hoc_sinh').select('*');
         allStudentsList = [];
         studentFastMap.clear();
 
@@ -931,8 +978,9 @@
           const cleanMa = String(s.ma_hs || '').trim();
           const cleanLop = String(s.ten_lop || '').trim();
           const cleanKhoi = String(s.khoi_id || (cleanLop ? cleanLop.match(/\d+/)?.[0] : '10')).trim();
+          const ngaySinh = String(s.ngay_sinh || s.ns || s.date_of_birth || '').trim();
 
-          const item = { ma_hs: cleanMa, ho_ten: String(s.ho_ten || '').trim(), ten_lop: cleanLop, khoi_id: cleanKhoi };
+          const item = { ma_hs: cleanMa, ho_ten: String(s.ho_ten || '').trim(), ten_lop: cleanLop, khoi_id: cleanKhoi, ngay_sinh: ngaySinh };
           allStudentsList.push(item);
           studentFastMap.set(cleanMa, item);
         });
@@ -982,24 +1030,20 @@
         .forEach(item => lopSelect.innerHTML += `<option value="${item.ten_lop}">${item.ten_lop}</option>`);
     }
 
-    // HÀM BÓC TÁCH MÃ MÃ HS SIÊU TRÍ TUỆ TỪ CHUỖI QR THẺ THỰC TẾ
     function parseQRData(rawQR) {
       if (!rawQR) return { maHS: '', hoTen: '', lop: '', khoi: '' };
       rawQR = String(rawQR).trim();
 
-      // 1. Khớp trực tiếp với đệm Fast-Map
       for (let [ma, sObj] of studentFastMap.entries()) {
         if (ma && rawQR.includes(ma)) {
           return {
-            maHS: ma,
-            hoTen: sObj.ho_ten || '',
+            maHS: ma, hoTen: sObj.ho_ten || '',
             lop: sObj.ten_lop || 'Chưa xếp lớp',
             khoi: sObj.khoi_id || (sObj.ten_lop ? sObj.ten_lop.match(/\d+/)?.[0] : '10')
           };
         }
       }
 
-      // 2. Dùng Regex tìm Mã số học sinh (Dãy 6-15 chữ số hoặc dạng Mã HS:)
       let cleanMa = '';
       let matchDigit = rawQR.match(/\b\d{6,15}\b/);
       let matchPattern = rawQR.match(/(?:mã\s*hs|ma\s*hs|hs)?[:\s]*([a-z0-9_-]{5,20})/i);
@@ -1008,10 +1052,7 @@
       else if (matchPattern) cleanMa = matchPattern[1].trim();
       else cleanMa = rawQR.split('|')[0].replace(/[^a-zA-Z0-9]/g, '').slice(0, 20);
 
-      // Tra cứu lại
       let sObj = studentFastMap.get(cleanMa);
-
-      // 3. Trích xuất Họ tên nếu có dạng "Họ tên: Nguyễn Hữu An"
       let parsedName = '';
       let matchName = rawQR.match(/(?:họ\s*tên|ho\s*ten|họ\s*và\s*tên)[:\s]*([^|]+)/i);
       if (matchName && matchName[1]) parsedName = matchName[1].trim();
@@ -1024,31 +1065,22 @@
       };
     }
 
-    // 4. THUẬT TOÁN QUÉT MÃ QR SIÊU TỐC & CHÍNH XÁC KHỐI/LỚP
+    // 4. QUÉT MÃ QR SIÊU TỐC
     async function onQRScanned(rawQR) {
       if (!rawQR) return;
-
-      if (html5QrcodeScanner) {
-        try { html5QrcodeScanner.pause(true); } catch(e){}
-      }
+      if (html5QrcodeScanner) { try { html5QrcodeScanner.pause(true); } catch(e){} }
 
       const parsed = parseQRData(rawQR);
-      const maHS = parsed.maHS;
-      const hoTen = parsed.hoTen;
-      const lop = parsed.lop;
-      const khoi = parsed.khoi;
-
       const actionRadio = document.querySelector('input[name="qr-action"]:checked');
       const action = actionRadio ? actionRadio.value : 'muon_khong_phep';
       const actionText = actionRadio ? actionRadio.parentElement.innerText.trim() : 'Đi học muộn (Không phép)';
 
-      pendingQRData = { maHS, hoTen, lop, khoi, action, actionText };
+      pendingQRData = { ...parsed, action, actionText };
 
-      document.getElementById('modal-ma-hs').innerText = maHS;
-      document.getElementById('modal-ho-ten').innerText = hoTen;
-      document.getElementById('modal-lop').innerText = `Lớp ${lop} (Khối ${khoi})`;
+      document.getElementById('modal-ma-hs').innerText = parsed.maHS;
+      document.getElementById('modal-ho-ten').innerText = parsed.hoTen;
+      document.getElementById('modal-lop').innerText = `Lớp ${parsed.lop} (Khối ${parsed.khoi})`;
       document.getElementById('modal-hinh-thuc').innerText = actionText;
-
       document.getElementById('qr-modal').classList.remove('hidden');
     }
 
@@ -1066,7 +1098,6 @@
       const todayStr = formatDateToYYYYMMDD(new Date());
       const nowTimeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
-      // CẮT DỮ LIỆU CHỐNG LỖI CSDL CHARACTER VARYING(50)
       const safeMaHS = String(maHS).slice(0, 30);
       const safeHoTen = String(hoTen).slice(0, 50);
       const safeLop = String(lop).slice(0, 20);
@@ -1188,9 +1219,54 @@
       } catch (e) { alert("Lỗi lưu CSDL: " + e.message); }
     }
 
+    // XỬ LÝ CHUYỂN ĐỔI CHẤM TẬP THỂ VÀ CÁ NHÂN
+    function onChamDiemScopeTypeChange() {
+      const scopeType = document.querySelector('input[name="cd-scope-type"]:checked').value;
+      const boxCaNhan = document.getElementById('box-cd-canhan');
+      boxCaNhan.classList.toggle('hidden', scopeType !== 'ca_nhan');
+      updateTab2StatusLabel();
+    }
+
+    function updateTab2StatusLabel() {
+      const scopeType = document.querySelector('input[name="cd-scope-type"]:checked').value;
+      const lopVal = document.getElementById('cd-lop').value;
+      const hsVal = document.getElementById('cd-hocsinh').value;
+      const statusLbl = document.getElementById('tab2-selected-status');
+
+      if (scopeType === 'tap_the') {
+        statusLbl.innerText = lopVal ? `Đang chấm Tập thể Lớp ${lopVal}` : "Chưa chọn lớp";
+      } else {
+        if (!lopVal) {
+          statusLbl.innerText = "Chưa chọn lớp";
+        } else if (!hsVal) {
+          statusLbl.innerText = `Chưa chọn học sinh Lớp ${lopVal}`;
+        } else {
+          const sObj = studentFastMap.get(hsVal);
+          statusLbl.innerText = `Đang chấm HS: ${sObj ? sObj.ho_ten : hsVal} (${lopVal})`;
+        }
+      }
+    }
+
+    function filterStudentSelectOptions() {
+      const kw = document.getElementById('cd-search-student-input').value.trim();
+      const select = document.getElementById('cd-hocsinh');
+      select.innerHTML = '<option value="">-- Chọn Học Sinh --</option>';
+
+      const filtered = currentClassStudents.filter(s => {
+        const fullStr = `${s.ho_ten} ${s.ngay_sinh || ''}`;
+        return matchSearchKeyword(fullStr, kw);
+      });
+
+      filtered.forEach(s => {
+        const nsStr = s.ngay_sinh ? ` - NS: ${s.ngay_sinh}` : '';
+        select.innerHTML += `<option value="${s.ma_hs}">${s.ho_ten}${nsStr}</option>`;
+      });
+    }
+
+    // LƯU ĐIỂM CHẤM THI ĐUA (ĐÃ CHỈNH SỬA: CHẤM TẬP THỂ CHỈ LƯU 1 BẢN GHI CHO LỚP)
     async function submitChamDiem() {
+      const scopeType = document.querySelector('input[name="cd-scope-type"]:checked').value;
       const lop = document.getElementById('cd-lop').value;
-      const doiTuong = document.getElementById('cd-hocsinh').value;
       const buoiVal = getCurrentBuoi();
       const loaiDiem = document.querySelector('input[name="loai-diem"]:checked').value;
       const tcVal = document.getElementById('list-danh-muc-diem').value;
@@ -1200,15 +1276,7 @@
       if (!tcVal) return alert("Vui lòng chọn nội dung tiêu chí!");
 
       const khoi = lop.match(/\d+/)?.[0] || '10';
-      let maHS = '', hoTen = '', tenHD = '', diemSo = 0, maHD = tcVal;
-
-      if (doiTuong === 'CALOP') {
-        maHS = `LOP_${lop}`; hoTen = `Tập thể Lớp ${lop}`;
-      } else {
-        maHS = doiTuong;
-        const sObj = studentFastMap.get(doiTuong);
-        hoTen = sObj ? sObj.ho_ten : doiTuong;
-      }
+      let tenHD = '', diemSo = 0, maHD = tcVal;
 
       if (tcVal === 'LINH_HOAT') {
         tenHD = document.getElementById('custom-ten-hd').value.trim();
@@ -1220,28 +1288,63 @@
         if (found) { tenHD = found.ten_hd; diemSo = parseFloat(found.diem) || 0; } else { tenHD = tcVal; }
       }
 
+      const chiTietStr = ghiChu ? `[${maHD}] ${tenHD} (${ghiChu})`.slice(0, 100) : `[${maHD}] ${tenHD}`.slice(0, 100);
+      const trangThaiVal = loaiDiem === 'cong' ? 'diem_thuong' : 'diem_tru';
+
       try {
-        const { error } = await _supabase.from('diem_danh_master').insert([{
-          ma_hs: String(maHS).slice(0, 30),
-          ho_ten: String(hoTen).slice(0, 50),
-          khoi: String(khoi),
-          lop: String(lop).slice(0, 20),
-          ngay_diem_danh: formatDateToYYYYMMDD(new Date()),
-          buoi: buoiVal,
-          trang_thai: loaiDiem === 'cong' ? 'diem_thuong' : 'diem_tru',
-          ma_hd: maHD,
-          chi_tiet: ghiChu ? `[${maHD}] ${tenHD} (${ghiChu})`.slice(0, 100) : `[${maHD}] ${tenHD}`.slice(0, 100),
-          diem: diemSo,
-          ten_nguoi_cap_nhat: currentUser ? String(currentUser.ho_ten).slice(0, 50) : 'Admin'
-        }]);
+        let recordsToInsert = [];
+
+        if (scopeType === 'tap_the') {
+          // LƯU 1 BẢN GHI DUY NHẤT DÀNH CHO TẬP THỂ LỚP (Mã đại diện LOP_[TênLớp])
+          recordsToInsert.push({
+            ma_hs: `LOP_${lop}`,
+            ho_ten: `Tập thể Lớp ${lop}`,
+            khoi: String(khoi),
+            lop: String(lop).slice(0, 20),
+            ngay_diem_danh: formatDateToYYYYMMDD(new Date()),
+            buoi: buoiVal,
+            trang_thai: trangThaiVal,
+            ma_hd: maHD,
+            chi_tiet: chiTietStr,
+            diem: diemSo,
+            ten_nguoi_cap_nhat: currentUser ? String(currentUser.ho_ten).slice(0, 50) : 'Admin'
+          });
+        } else {
+          // CHẤM CHO CÁ NHÂN HỌC SINH
+          const cdHocSinhVal = document.getElementById('cd-hocsinh').value;
+          if (!cdHocSinhVal) return alert("Vui lòng chọn học sinh cá nhân cần chấm!");
+
+          const sObj = studentFastMap.get(cdHocSinhVal);
+          const hoTen = sObj ? sObj.ho_ten : cdHocSinhVal;
+
+          recordsToInsert.push({
+            ma_hs: String(cdHocSinhVal).slice(0, 30),
+            ho_ten: String(hoTen).slice(0, 50),
+            khoi: String(khoi),
+            lop: String(lop).slice(0, 20),
+            ngay_diem_danh: formatDateToYYYYMMDD(new Date()),
+            buoi: buoiVal,
+            trang_thai: trangThaiVal,
+            ma_hd: maHD,
+            chi_tiet: chiTietStr,
+            diem: diemSo,
+            ten_nguoi_cap_nhat: currentUser ? String(currentUser.ho_ten).slice(0, 50) : 'Admin'
+          });
+        }
+
+        const { error } = await _supabase.from('diem_danh_master').insert(recordsToInsert);
 
         if (error) throw error;
-        alert(`Đã lưu thành công cho Lớp ${lop}! Ghi nhận ${diemSo > 0 ? '+' + diemSo : diemSo} điểm.`);
+        alert(`Đã lưu thành công cho ${scopeType === 'tap_the' ? 'Tập thể Lớp ' + lop : 'Học sinh'}! Ghi nhận ${diemSo > 0 ? '+' + diemSo : diemSo} điểm.`);
         document.getElementById('cd-ghichu').value = '';
+        if (tcVal === 'LINH_HOAT') {
+          document.getElementById('custom-ten-hd').value = '';
+          document.getElementById('custom-diem').value = '';
+        }
       } catch (e) { alert("Lỗi lưu CSDL: " + e.message); }
     }
 
-    // 6. THỐNG KÊ & XẾP HẠNG THI ĐUA
+    // 6. THỐNG KÊ & XẾP HẠNG THI ĐUA (CÓ TIÊU CHÍ PHỤ: ĐIỂM THI ĐUA TẬP THỂ LỚP)
     function onThongKeScopeChange() {
       const scope = document.getElementById('tk-doituong').value;
       document.getElementById('box-tk-khoi').classList.toggle('hidden', scope === 'toan_truong');
@@ -1342,8 +1445,11 @@
       document.getElementById('tk-stat-tong-tru').innerText = `-${totalTru}`;
       document.getElementById('tk-stat-tong-vang').innerText = totalVang;
 
-      renderClassRanking(filteredRecords, scope, khoiVal, lopVal);
-      renderStudentRanking(filteredRecords, scope, khoiVal, lopVal);
+      // HÀM TÍNH ĐIỂM LỚP & TẢI BẢNG LỚP
+      const classTotalPointsMap = renderClassRanking(filteredRecords, scope, khoiVal, lopVal);
+      
+      // XẾP HẠNG HỌC SINH CÓ DÙNG BẢNG ĐIỂM LỚP LÀM TIÊU CHÍ PHỤ
+      renderStudentRanking(filteredRecords, scope, khoiVal, lopVal, classTotalPointsMap);
       renderWarningList(filteredRecords, scope, khoiVal, lopVal);
     }
 
@@ -1365,8 +1471,12 @@
         }
       });
 
+      const classTotalPointsMap = new Map();
+
       const classStats = Array.from(classMap.values()).map(cs => {
         const tongDiem = 100 + cs.cong - cs.tru;
+        classTotalPointsMap.set(cs.ten_lop, tongDiem);
+
         let xepLoai = 'Lớp Xuất Sắc';
         if (tongDiem < 70) xepLoai = 'Lớp Cần Cố Gắng';
         else if (tongDiem < 85) xepLoai = 'Lớp Khá';
@@ -1380,8 +1490,8 @@
       tbody.innerHTML = '';
 
       if (classStats.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="p-4 text-center text-gray-400">Không tìm thấy dữ liệu các lớp.</td></tr>';
-        return;
+        tbody.innerHTML = '<tr><td colspan="9" class="p-4 text-center text-gray-400 bg-gray-50">Không tìm thấy dữ liệu các lớp.</td></tr>';
+        return classTotalPointsMap;
       }
 
       classStats.forEach((cs, index) => {
@@ -1400,14 +1510,16 @@
           </tr>
         `;
       });
+
+      return classTotalPointsMap;
     }
 
-    function getAggregatedStudentStats(records, scope, khoiVal, lopVal) {
+    function getAggregatedStudentStats(records, scope, khoiVal, lopVal, classTotalPointsMap) {
       const studentMap = new Map();
 
       records.forEach(r => {
         const mHS = String(r.ma_hs || '').trim();
-        if (!mHS || mHS.startsWith('LOP_')) return;
+        if (!mHS || mHS.startsWith('LOP_')) return; // BỎ QUA BẢN GHI ĐIỂM TẬP THỂ LỚP
 
         const rLop = String(r.lop || '').trim();
         const rKhoi = String(r.khoi || (rLop ? rLop.match(/\d+/)?.[0] : '') || '10').trim();
@@ -1452,30 +1564,47 @@
         }
       });
 
-      return Array.from(studentMap.values()).map(s => ({ ...s, tongDiem: 100 + s.cong - s.tru }));
+      return Array.from(studentMap.values()).map(s => {
+        const classScore = classTotalPointsMap ? (classTotalPointsMap.get(s.ten_lop) || 100) : 100;
+        return { ...s, tongDiem: 100 + s.cong - s.tru, classTongDiem: classScore };
+      });
     }
 
-    function renderStudentRanking(records, scope, khoiVal, lopVal) {
-      const studentStats = getAggregatedStudentStats(records, scope, khoiVal, lopVal);
+    function renderStudentRanking(records, scope, khoiVal, lopVal, classTotalPointsMap) {
+      const studentStats = getAggregatedStudentStats(records, scope, khoiVal, lopVal, classTotalPointsMap);
       const filterMode = document.getElementById('hs-rank-filter-mode')?.value || 'record_first';
 
-      if (filterMode === 'vi_pham_desc') {
-        studentStats.sort((a, b) => (b.tru + b.soVang + b.soMuon) - (a.tru + a.soVang + a.soMuon));
-      } else if (filterMode === 'diem_high') {
-        studentStats.sort((a, b) => b.cong - a.cong || b.tongDiem - a.tongDiem);
-      } else {
-        studentStats.sort((a, b) => {
-          if (a.hasRecords !== b.hasRecords) return a.hasRecords ? -1 : 1;
-          return (b.tru + b.soVang + b.soMuon) - (a.tru + a.soVang + a.soMuon) || b.tongDiem - a.tongDiem;
-        });
-      }
+      // SẮP XẾP HỌC SINH VỚI TIÊU CHÍ PHỤ LÀ ĐIỂM TẬP THỂ LỚP
+      studentStats.sort((a, b) => {
+        let primaryDiff = 0;
 
-      const displayList = studentStats.slice(0, 25);
+        if (filterMode === 'vi_pham_desc') {
+          primaryDiff = (b.tru + b.soVang + b.soMuon) - (a.tru + a.soVang + a.soMuon);
+        } else if (filterMode === 'diem_high') {
+          primaryDiff = (b.cong - a.cong) || (b.tongDiem - a.tongDiem);
+        } else {
+          if (a.hasRecords !== b.hasRecords) return a.hasRecords ? -1 : 1;
+          primaryDiff = (b.tru + b.soVang + b.soMuon) - (a.tru + a.soVang + a.soMuon) || (b.tongDiem - a.tongDiem);
+        }
+
+        // TIÊU CHÍ PHỤ 1: NẾU BẰNG ĐIỂM -> SO SÁNH ĐIỂM THI ĐUA LỚP (LỚP ĐIỂM CAO HƠN THÌ XẾP TRÊN)
+        if (primaryDiff === 0) {
+          const classDiff = (b.classTongDiem || 100) - (a.classTongDiem || 100);
+          if (classDiff !== 0) return classDiff;
+        } else {
+          return primaryDiff;
+        }
+
+        // TIÊU CHÍ PHỤ 2: TÊN BẢNG CHỮ CÁI TIẾNG VIỆT
+        return a.ho_ten.localeCompare(b.ho_ten, 'vi');
+      });
+
+      const displayList = studentStats.slice(0, 30);
       const tbody = document.getElementById('hs-rank-table-body');
       tbody.innerHTML = '';
 
       if (displayList.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="p-4 text-center text-gray-400 bg-gray-50">Không tìm thấy học sinh nào trong phạm vi này.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" class="p-4 text-center text-gray-400 bg-gray-50">Không tìm thấy học sinh nào trong phạm vi này.</td></tr>';
         return;
       }
 
@@ -1491,6 +1620,7 @@
             <td class="p-2.5 text-center font-bold text-green-600">+${st.cong}</td>
             <td class="p-2.5 text-center font-bold text-red-600">-${st.tru}</td>
             <td class="p-2.5 text-center font-bold text-emerald-700">${st.tongDiem}đ</td>
+            <td class="p-2.5 text-center text-xs font-bold text-blue-700 bg-blue-50 rounded">${st.ten_lop}: ${st.classTongDiem || 100}đ</td>
             <td class="p-2.5 text-center"><button class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded text-xs font-bold hover:bg-emerald-200">Chi Tiết</button></td>
           </tr>
         `;
@@ -1498,7 +1628,7 @@
     }
 
     function renderWarningList(records, scope, khoiVal, lopVal) {
-      const studentStats = getAggregatedStudentStats(records, scope, khoiVal, lopVal);
+      const studentStats = getAggregatedStudentStats(records, scope, khoiVal, lopVal, null);
       const warningList = studentStats.filter(s => s.soVang > 0 || s.soMuon > 0 || s.soVP > 0 || s.tru > 0);
 
       warningList.sort((a, b) => (b.soVang + b.soMuon + b.tru) - (a.soVang + a.soMuon + a.tru));
@@ -1532,14 +1662,13 @@
       });
     }
 
-    // 7. CẢNH BÁO VÀ HÀM QUẢN TRỊ CÁN BỘ & TUẦN HỌC TỐT
+    // 7. QUẢN TRỊ CÁN BỘ & TUẦN HỌC TỐT
     async function submitTuanHocTot() {
       const lop = document.getElementById('tht-lop').value;
       const tuNgay = document.getElementById('tht-ngay-bat-dau').value;
       const denNgay = document.getElementById('tht-ngay-ket-thuc').value;
 
       if (!lop || !tuNgay || !denNgay) return alert("Vui lòng nhập đầy đủ Lớp và Khoảng thời gian đăng ký!");
-
       alert(`Đã lưu thiết lập Đăng Ký Tuần Học Tốt cho Lớp ${lop} (từ ${tuNgay} đến ${denNgay}) thành công!`);
     }
 
@@ -1553,16 +1682,13 @@
 
       try {
         let payload = { ma_cb: maCB, ho_ten: hoTen, mat_khau: passVal, vai_tro: vaiTro };
-
         let { error } = await _supabase.from('can_bo').insert([payload]);
 
         if (error && (error.message.includes('ma_cb') || error.message.includes('column'))) {
           payload = { ma_can_bo: maCB, ho_ten: hoTen, mat_khau: passVal, vai_tro: vaiTro };
           const res2 = await _supabase.from('can_bo').insert([payload]);
           if (res2.error) throw res2.error;
-        } else if (error) {
-          throw error;
-        }
+        } else if (error) { throw error; }
 
         alert(`Thêm cán bộ ${hoTen} (${maCB}) vào CSDL thành công!`);
         document.getElementById('adm-cb-ma').value = '';
@@ -1715,7 +1841,7 @@
       const select = document.getElementById('admin-move-select-hs');
       select.innerHTML = '<option value="">-- Chọn học sinh từ kết quả --</option>';
       if (!kw) return alert("Vui lòng nhập từ khóa!");
-      const matches = allStudentsList.filter(s => s.ho_ten.toLowerCase().includes(kw) || s.ma_hs.toLowerCase().includes(kw));
+      const matches = allStudentsList.filter(s => matchSearchKeyword(s.ho_ten, kw) || s.ma_hs.toLowerCase().includes(kw));
       if (matches.length === 0) return alert("Không tìm thấy học sinh!");
       matches.forEach(s => select.innerHTML += `<option value="${s.ma_hs}">${s.ho_ten} (Mã: ${s.ma_hs} - Lớp: ${s.ten_lop})</option>`);
     }
@@ -1845,12 +1971,23 @@
       try {
         let { data } = await _supabase.from('danh_muc_diem').select('*');
         allDanhMucDiem = data || [];
+
+        const mangSelect = document.getElementById('cd-mang-filter');
+        if (mangSelect) {
+          const mangSet = new Set();
+          allDanhMucDiem.forEach(d => { if (d.mang) mangSet.add(d.mang.trim()); });
+          mangSelect.innerHTML = '<option value="">-- Tất cả các Mảng Thi Đua --</option>';
+          mangSet.forEach(m => mangSelect.innerHTML += `<option value="${m}">${m}</option>`);
+        }
+
         filterDanhMucDiem();
       } catch (e) {}
     }
 
     function filterDanhMucDiem() {
       const loaiSelected = document.querySelector('input[name="loai-diem"]:checked').value;
+      const selectedMang = document.getElementById('cd-mang-filter')?.value || '';
+      const searchKw = document.getElementById('cd-search-tc-input')?.value || '';
       const select = document.getElementById('list-danh-muc-diem');
       const badge = document.getElementById('tc-count-badge');
       if (!select) return;
@@ -1858,16 +1995,34 @@
       const filtered = allDanhMucDiem.filter(item => {
         const itemLoai = String(item.loai || '').toLowerCase();
         const diemVal = parseFloat(item.diem) || 0;
-        return loaiSelected === 'tru' ? (itemLoai.includes('tru') || diemVal < 0) : (itemLoai.includes('cong') || diemVal > 0);
+        const isLoaiMatch = loaiSelected === 'tru' ? (itemLoai.includes('tru') || diemVal < 0) : (itemLoai.includes('cong') || diemVal > 0);
+        const isMangMatch = !selectedMang || String(item.mang || '').trim() === selectedMang.trim();
+        const isKwMatch = matchSearchKeyword(`${item.ma_hd} ${item.ten_hd}`, searchKw);
+        return isLoaiMatch && isMangMatch && isKwMatch;
       });
 
       if (badge) badge.innerText = `Có ${filtered.length} tiêu chí`;
       select.innerHTML = `<option value="">-- Chọn Tiêu Chí (${filtered.length} tiêu chí) --</option>`;
 
+      const groupMap = new Map();
       filtered.forEach(item => {
-        const diemNum = parseFloat(item.diem) || 0;
-        select.innerHTML += `<option value="${item.ma_hd}">[${item.ma_hd}] ${item.ten_hd} (${diemNum > 0 ? '+' + diemNum : diemNum}đ)</option>`;
+        const mangName = item.mang ? item.mang.trim() : 'Khác / Chung';
+        if (!groupMap.has(mangName)) groupMap.set(mangName, []);
+        groupMap.get(mangName).push(item);
       });
+
+      for (let [mangName, items] of groupMap.entries()) {
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = `📂 Mảng: ${mangName.toUpperCase()}`;
+        items.forEach(item => {
+          const diemNum = parseFloat(item.diem) || 0;
+          const opt = document.createElement('option');
+          opt.value = item.ma_hd;
+          opt.innerText = `[${item.ma_hd}] ${item.ten_hd} (${diemNum > 0 ? '+' + diemNum : diemNum}đ)`;
+          optgroup.appendChild(opt);
+        });
+        select.appendChild(optgroup);
+      }
 
       select.innerHTML += `<option value="LINH_HOAT" class="font-bold text-amber-600">➕ [Nhập tiêu chí & điểm linh hoạt...]</option>`;
       toggleCustomPointInput();
@@ -1881,8 +2036,11 @@
     async function fetchStudentsByClass(className) {
       if (!className) { currentClassStudents = []; return []; }
       try {
-        let { data } = await _supabase.from('hoc_sinh').select('ma_hs, ho_ten, ten_lop').eq('ten_lop', className.trim()).order('ho_ten', { ascending: true });
-        currentClassStudents = (data || []).map(s => ({ ma_hs: String(s.ma_hs).trim(), ho_ten: String(s.ho_ten).trim(), ten_lop: className }));
+        let { data } = await _supabase.from('hoc_sinh').select('*').eq('ten_lop', className.trim()).order('ho_ten', { ascending: true });
+        currentClassStudents = (data || []).map(s => {
+          const ns = String(s.ngay_sinh || s.ns || s.date_of_birth || '').trim();
+          return { ma_hs: String(s.ma_hs).trim(), ho_ten: String(s.ho_ten).trim(), ten_lop: className, ngay_sinh: ns };
+        });
         return currentClassStudents;
       } catch (err) { return []; }
     }
@@ -1920,22 +2078,28 @@
         let optionsHTML = '<option value="">-- Chọn Học Sinh Vắng --</option>';
         currentClassStudents.forEach(s => {
           const isSelectedElsewhere = selectedValues.includes(String(s.ma_hs)) && String(s.ma_hs) !== currentVal;
-          if (isSelectedElsewhere) optionsHTML += `<option value="${s.ma_hs}" disabled class="text-gray-300 bg-gray-100">${s.ho_ten} (Đã chọn)</option>`;
-          else optionsHTML += `<option value="${s.ma_hs}" ${String(s.ma_hs) === currentVal ? 'selected' : ''}>${s.ho_ten} - [Mã: ${s.ma_hs}]</option>`;
+          const nsStr = s.ngay_sinh ? ` - NS: ${s.ngay_sinh}` : '';
+          if (isSelectedElsewhere) optionsHTML += `<option value="${s.ma_hs}" disabled class="text-gray-300 bg-gray-100">${s.ho_ten}${nsStr} (Đã chọn)</option>`;
+          else optionsHTML += `<option value="${s.ma_hs}" ${String(s.ma_hs) === currentVal ? 'selected' : ''}>${s.ho_ten}${nsStr}</option>`;
         });
         selectElem.innerHTML = optionsHTML;
       });
     }
 
-    function onChamDiemKhoiChange() { populateLopDropdown('cd-khoi', 'cd-lop'); }
+    function onChamDiemKhoiChange() { populateLopDropdown('cd-khoi', 'cd-lop'); updateTab2StatusLabel(); }
     async function onChamDiemLopChange() {
       const lopVal = document.getElementById('cd-lop').value;
       const studentSelect = document.getElementById('cd-hocsinh');
-      document.getElementById('tab2-selected-status').innerText = lopVal ? `Đã chọn lớp ${lopVal}` : "Chưa chọn lớp";
-      studentSelect.innerHTML = '<option value="CALOP">-- Cả Lớp --</option>';
+      updateTab2StatusLabel();
+
+      studentSelect.innerHTML = '<option value="">-- Chọn Học Sinh --</option>';
       if (!lopVal) return;
+
       const students = await fetchStudentsByClass(lopVal);
-      students.forEach(s => { studentSelect.innerHTML += `<option value="${s.ma_hs}">${s.ho_ten} - (${s.ma_hs})</option>`; });
+      students.forEach(s => {
+        const nsStr = s.ngay_sinh ? ` - NS: ${s.ngay_sinh}` : '';
+        studentSelect.innerHTML += `<option value="${s.ma_hs}">${s.ho_ten}${nsStr}</option>`;
+      });
     }
 
     function switchTab(index) {
