@@ -2,17 +2,17 @@
 <html lang="vi">
 <head>
   <!-- ============================================================================
-       PHIÊN BẢN HỆ THỐNG: v3.2.0-SDB_SORT_NAME
+       PHIÊN BẢN HỆ THỐNG: v3.3.0-FIX_QR_LOP
        NGÀY CẬP NHẬT: 05/10/2026
        NỘI DUNG CẬP NHẬT:
-       - THỐNG KÊ SỔ ĐẦU BÀI LỚP CUỐI TUẦN CHỈ CẦN NHẬP SỐ LƯỢNG TIẾT TƯƠNG ỨNG MỨC ĐIỂM SỐ.
-       - ĐIỂM MIỆNG HỌC SINH GIỮ NGUYÊN CHI TIẾT TÍCH CHỌN.
-       - SẮP XẾP DANH SÁCH HỌC SINH ƯU TIÊN TÊN -> ĐỆM -> HỌ (A-Z).
-       - KẾT NỐI VÀ TỰ ĐỘNG TÍNH ĐIỂM SUPABASE CSDL.
+       - SỬA LỖI HỌC SINH BỊ HIỂN THỊ "CHƯA XẾP LỚP" KHI TỔNG HỢP VÀ QUÉT QR.
+       - TỐI ƯU THUẬT TOÁN TRA CỨU QR DƯỚI 1MS (O(1) MAP LOOKUP) VÀ BẬT NATIVE BARCODE DETECTOR.
+       - SẮP XẾP DANH SÁCH HỌC SINH TỰ ĐỘNG THEO TÊN -> ĐỆM -> HỌ (A-Z).
+       - ĐƠN GIẢN HÓA SỔ ĐẦU BÀI CUỐI TUẦN & TỰ ĐỘNG TÍNH ĐIỂM CSDL SUPABASE.
        ============================================================================ -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Quản Lý Nề Nếp & Thi Đua - THPT LHP (v3.2.0)</title>
+  <title>Quản Lý Nề Nếp & Thi Đua - THPT LHP (v3.3.0)</title>
   
   <!-- THƯ VIỆN BẮT BUỘC -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -48,7 +48,7 @@
     <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-gray-100">
       <div class="text-center border-b pb-3">
         <h2 class="text-xl font-bold text-blue-700 tracking-tight uppercase"><i class="fa-solid fa-shield-halved"></i> Đăng Nhập Hệ Thống</h2>
-        <p class="text-xs text-gray-500 font-semibold mt-1">Hệ thống Quản lý Nề nếp & Thi đua - THPT LHP (v3.2.0)</p>
+        <p class="text-xs text-gray-500 font-semibold mt-1">Hệ thống Quản lý Nề nếp & Thi đua - THPT LHP (v3.3.0)</p>
       </div>
       <div class="space-y-3 text-sm">
         <div>
@@ -73,14 +73,14 @@
 
   <div class="max-w-7xl mx-auto space-y-4">
     
-    <!-- HEADER GIỐNG HÌNH ẢNH MÔ TẢ -->
+    <!-- HEADER HỆ THỐNG -->
     <header class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
       <div>
         <h1 class="text-2xl font-bold text-blue-600 tracking-tight uppercase">QUẢN LÝ NỀN NẾP & THI ĐƯA</h1>
         <div class="text-sm text-gray-600 mt-1 flex items-center gap-2">
           <span>Người dùng: <strong id="user-name" class="text-blue-800">Đào Thuận Duy</strong></span> | 
           <span>Vai trò: <span id="user-role" class="bg-gray-500 text-white text-xs px-2.5 py-0.5 rounded-full font-bold">Admin</span></span>
-          <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-mono font-bold">v3.2.0-SDB</span>
+          <span class="bg-emerald-100 text-emerald-800 text-xs px-2 py-0.5 rounded font-mono font-bold">v3.3.0-FIX_QR</span>
         </div>
       </div>
       <div class="flex gap-2">
@@ -106,9 +106,9 @@
     <!-- NỘI DUNG CHÍNH CỦA CÁC TAB -->
     <main class="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-100 min-h-[460px]">
       
-      <!-- TAB 0: QUÉT MÃ QR -->
+      <!-- TAB 0: QUÉT MÃ QR (ĐÃ TỐI ƯU TỐC ĐỘ SIÊU NHANH) -->
       <section id="content-tab-0" class="tab-content hidden space-y-4">
-        <h2 class="text-lg font-bold text-blue-700 uppercase flex items-center gap-2"><i class="fa-solid fa-qrcode"></i> 0. Quét Mã QR Nề Nếp Học Sinh</h2>
+        <h2 class="text-lg font-bold text-blue-700 uppercase flex items-center gap-2"><i class="fa-solid fa-qrcode"></i> 0. Quét Mã QR Nề Nếp Học Sinh (Tốc Độ Cao)</h2>
         <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
           <label class="block font-bold text-gray-700 mb-2">Chọn hình thức ghi nhận khi quét QR:</label>
           <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -135,7 +135,7 @@
           <div class="flex flex-col items-center">
             <div id="reader" class="w-full max-w-sm bg-black rounded-xl overflow-hidden min-h-[260px]"></div>
             <div class="mt-3 flex gap-2">
-              <button onclick="startQRScanner()" class="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 flex items-center gap-1"><i class="fa-solid fa-camera"></i> Bật Camera</button>
+              <button onclick="startQRScanner()" class="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 flex items-center gap-1"><i class="fa-solid fa-camera"></i> Bật Camera Quét Tức Thời</button>
               <button onclick="stopQRScanner()" class="bg-gray-500 text-white text-sm px-4 py-2 rounded-lg font-semibold hover:bg-gray-600">Tắt Camera</button>
             </div>
           </div>
@@ -190,7 +190,7 @@
 
         <div class="space-y-3">
           <label class="block font-bold text-gray-700 text-sm flex justify-between items-center">
-            <span>Danh sách chi tiết học sinh vắng (Đã sắp xếp Tên -> Đệm -> Họ A-Z):</span>
+            <span>Danh sách chi tiết học sinh vắng (Sắp xếp Tên $\rightarrow$ Đệm $\rightarrow$ Họ A-Z):</span>
           </label>
           <div id="bv-student-rows" class="space-y-3">
             <p class="text-sm text-gray-400 italic bg-gray-50 p-4 rounded-xl border text-center">Vui lòng chọn Lớp để chọn danh sách học sinh vắng.</p>
@@ -202,7 +202,7 @@
         </button>
       </section>
 
-      <!-- TAB 2: CHẤM ĐIỂM THI ĐƯA & SỔ ĐẦU BÀI (TỐI ƯU SĐB CUỐI TUẦN + ĐIỂM MIỆNG HỌC SINH) -->
+      <!-- TAB 2: CHẤM ĐIỂM THI ĐƯA & SỔ ĐẦU BÀI CUỐI TUẦN -->
       <section id="content-tab-2" class="tab-content space-y-4">
         <!-- SUB-NAVI CHO TAB 2 -->
         <div class="flex flex-wrap gap-2 border-b pb-3">
@@ -321,10 +321,10 @@
           </button>
         </div>
 
-        <!-- CHẾ ĐỘ 2: ĐƠN GIẢN HÓA SỔ ĐẦU BÀI LỚP (TỔNG HỢP CUỐI TUẦN) + ĐIỂM MIỆNG HỌC SINH -->
+        <!-- CHẾ ĐỘ 2: THỐNG KÊ SỔ ĐẦU BÀI LỚP CUỐI TUẦN & ĐIỂM MIỆNG HỌC SINH -->
         <div id="tab2-mode-sdb-diem-mieng" class="hidden space-y-4">
           
-          <!-- KHU VỰC 1: THỐNG KÊ ĐIỂM SỔ ĐẦU BÀI LỚP (NHẬP SỐ LƯỢNG TIẾT TƯƠNG ỨNG CUỐI TUẦN) -->
+          <!-- KHU VỰC 1: THỐNG KÊ ĐIỂM SỔ ĐẦU BÀI LỚP CUỐI TUẦN -->
           <div class="bg-indigo-50/90 p-4 rounded-xl border border-indigo-200 space-y-3">
             <div class="flex justify-between items-center border-b border-indigo-200 pb-2">
               <h3 class="font-bold text-sm uppercase text-indigo-900 flex items-center gap-2">
@@ -980,6 +980,7 @@
     let html5QrcodeScanner = null;
     let pendingQRData = null;
     let selectedStudentTab2 = null;
+    let isProcessingQR = false; // CỜ CHỐNG QUÉT TRÙNG LẶP / LAG CAMERA
 
     function getCurrentBuoi() { return new Date().getHours() < 12 ? 'Sáng' : 'Chiều'; }
     function parseLocalDateStr(dateStr) {
@@ -991,7 +992,7 @@
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
 
-    // THUẬT TOÁN ĐÓNG GÓI & TÁCH TÊN TIẾNG VIỆT (TÊN -> ĐỆM -> HỌ)
+    // THUẬT TOÁN TÁCH TÊN TIẾNG VIỆT
     function splitVietnameseName(fullName) {
       if (!fullName) return { ho: '', dem: '', ten: '' };
       const parts = String(fullName).trim().split(/\s+/);
@@ -1007,15 +1008,12 @@
       const nameA = splitVietnameseName(aName);
       const nameB = splitVietnameseName(bName);
 
-      // 1. So sánh Tên trước
       let cmpTen = nameA.ten.localeCompare(nameB.ten, 'vi');
       if (cmpTen !== 0) return cmpTen;
 
-      // 2. So sánh Đệm
       let cmpDem = nameA.dem.localeCompare(nameB.dem, 'vi');
       if (cmpDem !== 0) return cmpDem;
 
-      // 3. So sánh Họ
       return nameA.ho.localeCompare(nameB.ho, 'vi');
     }
 
@@ -1128,7 +1126,7 @@
       }
     }
 
-    // 3. TẢI TOÀN BỘ CSDL HỌC SINH VÀ LỚP HỌC (SẮP XẾP TÊN->ĐỆM->HỌ A-Z)
+    // 3. TẢI TOÀN BỘ CSDL HỌC SINH (SỬA DỨT ĐIỂM LỖI CHƯA XẾP LỚP)
     async function fetchAllStudents() {
       try {
         const { data } = await _supabase.from('hoc_sinh').select('*');
@@ -1136,17 +1134,27 @@
         studentFastMap.clear();
 
         (data || []).forEach(s => {
-          const cleanMa = String(s.ma_hs || '').trim();
-          const cleanLop = String(s.ten_lop || '').trim();
-          const cleanKhoi = String(s.khoi_id || (cleanLop ? cleanLop.match(/\d+/)?.[0] : '10')).trim();
+          const cleanMa = String(s.ma_hs || s.ma_hoc_sinh || s.id || '').trim();
+          // Lấy linh hoạt tất cả tên cột có thể có trong Supabase
+          const cleanLop = String(s.ten_lop || s.lop || s.lop_ten || s.tenLop || '').trim();
+          const cleanKhoi = String(s.khoi_id || s.khoi || (cleanLop ? cleanLop.match(/\d+/)?.[0] : '10')).trim();
           const ngaySinh = String(s.ngay_sinh || s.ns || s.date_of_birth || '').trim();
 
-          const item = { ma_hs: cleanMa, ho_ten: String(s.ho_ten || '').trim(), ten_lop: cleanLop, khoi_id: cleanKhoi, ngay_sinh: ngaySinh };
-          allStudentsList.push(item);
-          studentFastMap.set(cleanMa, item);
+          const item = { 
+            ma_hs: cleanMa, 
+            ho_ten: String(s.ho_ten || s.ten || s.hoTen || '').trim(), 
+            ten_lop: cleanLop, 
+            khoi_id: cleanKhoi, 
+            ngay_sinh: ngaySinh 
+          };
+          
+          if (cleanMa) {
+            allStudentsList.push(item);
+            studentFastMap.set(cleanMa, item);
+          }
         });
 
-        // SẮP XẾP DANH SÁCH TOÀN BỘ HỌC SINH THEO TÊN -> ĐỆM -> HỌ A-Z
+        // SẮP XẾP TÊN -> ĐỆM -> HỌ A-Z
         allStudentsList.sort((a, b) => compareVietnameseNamesAsc(a.ho_ten, b.ho_ten));
 
       } catch (e) { console.error("Lỗi nạp bộ nhớ đệm học sinh:", e); }
@@ -1156,7 +1164,7 @@
       try {
         let { data } = await _supabase.from('lop').select('ten_lop, khoi_id').order('ten_lop', { ascending: true });
         if (!data || data.length === 0) {
-          const resHS = await _supabase.from('hoc_sinh').select('ten_lop, khoi_id');
+          const resHS = await _supabase.from('hoc_sinh').select('ten_lop, lop, khoi_id');
           data = resHS.data || [];
         }
 
@@ -1197,45 +1205,70 @@
         .forEach(item => lopSelect.innerHTML += `<option value="${item.ten_lop}">${item.ten_lop}</option>`);
     }
 
-    // 4. QUÉT MÃ QR
+    // 4. QUÉT MÃ QR (Đã tối ưu O(1) tức thì < 1ms)
     function parseQRData(rawQR) {
       if (!rawQR) return { maHS: '', hoTen: '', lop: '', khoi: '' };
-      rawQR = String(rawQR).trim();
+      const strQR = String(rawQR).trim();
 
-      for (let [ma, sObj] of studentFastMap.entries()) {
-        if (ma && rawQR.includes(ma)) {
-          return {
-            maHS: ma, hoTen: sObj.ho_ten || '',
-            lop: sObj.ten_lop || 'Chưa xếp lớp',
-            khoi: sObj.khoi_id || (sObj.ten_lop ? sObj.ten_lop.match(/\d+/)?.[0] : '10')
-          };
+      // 1. Tra cứu O(1) tức thì nếu chuỗi QR khớp chính xác Mã HS
+      if (studentFastMap.has(strQR)) {
+        const sObj = studentFastMap.get(strQR);
+        return {
+          maHS: sObj.ma_hs,
+          hoTen: sObj.ho_ten,
+          lop: sObj.ten_lop || 'Chưa xếp lớp',
+          khoi: sObj.khoi_id || (sObj.ten_lop ? sObj.ten_lop.match(/\d+/)?.[0] : '10')
+        };
+      }
+
+      // 2. Tách Mã HS bằng Regex / Dấu phân cách
+      let candidateMa = '';
+      const parts = strQR.split(/[\s|;,\n]+/);
+      for (let part of parts) {
+        const cleanPart = part.replace(/[^a-zA-Z0-9_-]/g, '').trim();
+        if (studentFastMap.has(cleanPart)) {
+          candidateMa = cleanPart;
+          break;
         }
       }
 
-      let cleanMa = '';
-      let matchDigit = rawQR.match(/\b\d{6,15}\b/);
-      let matchPattern = rawQR.match(/(?:mã\s*hs|ma\s*hs|hs)?[:\s]*([a-z0-9_-]{5,20})/i);
+      if (!candidateMa) {
+        const matchDigit = strQR.match(/\b\d{6,15}\b/);
+        if (matchDigit && studentFastMap.has(matchDigit[0])) {
+          candidateMa = matchDigit[0];
+        }
+      }
 
-      if (matchDigit) cleanMa = matchDigit[0].trim();
-      else if (matchPattern) cleanMa = matchPattern[1].trim();
-      else cleanMa = rawQR.split('|')[0].replace(/[^a-zA-Z0-9]/g, '').slice(0, 20);
+      if (candidateMa && studentFastMap.has(candidateMa)) {
+        const sObj = studentFastMap.get(candidateMa);
+        return {
+          maHS: sObj.ma_hs,
+          hoTen: sObj.ho_ten,
+          lop: sObj.ten_lop || 'Chưa xếp lớp',
+          khoi: sObj.khoi_id || (sObj.ten_lop ? sObj.ten_lop.match(/\d+/)?.[0] : '10')
+        };
+      }
 
-      let sObj = studentFastMap.get(cleanMa);
-      let parsedName = '';
-      let matchName = rawQR.match(/(?:họ\s*tên|ho\s*ten|họ\s*và\s*tên)[:\s]*([^|]+)/i);
-      if (matchName && matchName[1]) parsedName = matchName[1].trim();
+      // 3. Trường hợp QR ngoài / Học sinh mới
+      let cleanMa = parts[0].replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 30);
+      let parsedName = parts.length > 1 ? parts[1].trim() : ('Học sinh mã ' + cleanMa);
+      let parsedLop = parts.length > 2 ? parts[2].trim() : '';
 
       return {
-        maHS: cleanMa || rawQR.slice(0, 20),
-        hoTen: sObj ? sObj.ho_ten : (parsedName || 'Học sinh mã ' + cleanMa),
-        lop: sObj ? (sObj.ten_lop || 'Chưa xếp lớp') : 'Chưa xếp lớp',
-        khoi: sObj ? (sObj.khoi_id || (sObj.ten_lop ? sObj.ten_lop.match(/\d+/)?.[0] : '10')) : '10'
+        maHS: cleanMa,
+        hoTen: parsedName,
+        lop: parsedLop || 'Chưa xếp lớp',
+        khoi: parsedLop ? (parsedLop.match(/\d+/)?.[0] || '10') : '10'
       };
     }
 
     async function onQRScanned(rawQR) {
-      if (!rawQR) return;
-      if (html5QrcodeScanner) { try { html5QrcodeScanner.pause(true); } catch(e){} }
+      if (!rawQR || isProcessingQR) return;
+      isProcessingQR = true;
+
+      if (html5QrcodeScanner) { 
+        try { html5QrcodeScanner.pause(true); } catch(e){} 
+      }
 
       const parsed = parseQRData(rawQR);
       const actionRadio = document.querySelector('input[name="qr-action"]:checked');
@@ -1246,7 +1279,7 @@
 
       document.getElementById('modal-ma-hs').innerText = parsed.maHS;
       document.getElementById('modal-ho-ten').innerText = parsed.hoTen;
-      document.getElementById('modal-lop').innerText = `Lớp ${parsed.lop} (Khối ${parsed.khoi})`;
+      document.getElementById('modal-lop').innerText = parsed.lop !== 'Chưa xếp lớp' ? `Lớp ${parsed.lop} (Khối ${parsed.khoi})` : 'Chưa xếp lớp';
       document.getElementById('modal-hinh-thuc').innerText = actionText;
       document.getElementById('qr-modal').classList.remove('hidden');
     }
@@ -1288,7 +1321,7 @@
           }).eq('id', vangRecord.id);
 
           if (updateErr) throw updateErr;
-          alert(`Học sinh ${safeHoTen} (Lớp ${safeLop}) trước đó báo VẮNG. Đã tự động đổi thành ĐI MUỘN lúc ${nowTimeStr}!`);
+          alert(`Học sinh ${safeHoTen} (Lớp ${safeLop}) trước đó báo VẮNG. Đã đổi thành ĐI MUỘN lúc ${nowTimeStr}!`);
 
         } else {
           const { error: insertErr } = await _supabase.from('diem_danh_master').insert([{
@@ -1323,16 +1356,33 @@
 
     function closeQRModal() {
       document.getElementById('qr-modal').classList.add('hidden');
+      isProcessingQR = false;
       if (html5QrcodeScanner) { try { html5QrcodeScanner.resume(); } catch(e){} }
     }
 
     function startQRScanner() {
       if (html5QrcodeScanner) return;
-      html5QrcodeScanner = new Html5Qrcode("reader");
-      const config = { fps: 20, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
+      html5QrcodeScanner = new Html5Qrcode("reader", { 
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true } 
+      });
+      const config = { 
+        fps: 15, 
+        qrbox: { width: 250, height: 250 }, 
+        aspectRatio: 1.0 
+      };
       html5QrcodeScanner.start({ facingMode: "environment" }, config, onQRScanned).catch(err => alert("Lỗi Camera: " + err));
     }
-    function stopQRScanner() { if (html5QrcodeScanner) { html5QrcodeScanner.stop().then(() => { html5QrcodeScanner.clear(); html5QrcodeScanner = null; }); } }
+
+    function stopQRScanner() { 
+      if (html5QrcodeScanner) { 
+        html5QrcodeScanner.stop().then(() => { 
+          html5QrcodeScanner.clear(); 
+          html5QrcodeScanner = null; 
+          isProcessingQR = false;
+        }); 
+      } 
+    }
+    
     function processManualQR() { const val = document.getElementById('manual-ma-hs').value.trim(); if(val) onQRScanned(val); }
 
     // 5. BÁO VẮNG
@@ -1550,7 +1600,6 @@
       return { totalDiem, totalTiets: n10 + n9 + n8 + n7 + nYeu };
     }
 
-    // XỬ LÝ KHI CHỌN LỚP Ở CỘT CHẤM SĐB & ĐIỂM MIỆNG
     async function onSdbLopChange() {
       const lopVal = document.getElementById('sdb-lop').value;
       const grid = document.getElementById('sdb-student-grid');
@@ -1597,7 +1646,6 @@
       const todayStr = formatDateToYYYYMMDD(new Date());
       const recordsToInsert = [];
 
-      // 1. LẤY SỐ LƯỢNG TIẾT SỔ ĐẦU BÀI CUỐI TUẦN DÀNH CHO LỚP
       const { totalDiem: diemSdbLop, totalTiets } = calcSdbTotalPreview();
       const n10 = parseInt(document.getElementById('sdb-sl-tiet10')?.value) || 0;
       const n9 = parseInt(document.getElementById('sdb-sl-tiet9')?.value) || 0;
@@ -1621,7 +1669,6 @@
         });
       }
 
-      // 2. TẠO CÁC BẢN GHI ĐIỂM CÁ NHÂN HỌC SINH (NẾU CÓ TÍCH CHỌN)
       const checkedBoxes = document.querySelectorAll('#sdb-student-grid input[type="checkbox"]:checked');
       const diemHsRaw = parseFloat(document.getElementById('sdb-diem-hs-val').value) || 10;
       const monNote = document.getElementById('sdb-mon-danh-gia')?.value.trim() || 'Bài cũ / Điểm miệng';
@@ -1831,6 +1878,7 @@
       return classTotalPointsMap;
     }
 
+    // TỔNG HỢP THỐNG KÊ HỌC SINH (ƯU TIÊN LẤY TÊN LỚP MỚI TỪ BẢNG HỌC SINH)
     function getAggregatedStudentStats(records, scope, khoiVal, lopVal, classTotalPointsMap) {
       const studentMap = new Map();
 
@@ -1838,18 +1886,22 @@
         const mHS = String(r.ma_hs || '').trim();
         if (!mHS || mHS.startsWith('LOP_')) return;
 
-        const rLop = String(r.lop || '').trim();
-        const rKhoi = String(r.khoi || (rLop ? rLop.match(/\d+/)?.[0] : '') || '10').trim();
+        const sObj = studentFastMap.get(mHS);
+        // Ưu tiên lấy Tên Lớp thực tế của Học Sinh trong CSDL
+        const realLop = (sObj && sObj.ten_lop && sObj.ten_lop !== 'Chưa xếp lớp') 
+                        ? sObj.ten_lop 
+                        : (r.lop && r.lop !== 'Chưa xếp lớp' ? String(r.lop).trim() : 'Chưa xếp lớp');
+        
+        const rKhoi = String((sObj && sObj.khoi_id) || r.khoi || (realLop ? realLop.match(/\d+/)?.[0] : '') || '10').trim();
 
-        if (scope === 'theo_lop' && lopVal && rLop !== lopVal.trim()) return;
-        if (scope === 'theo_khoi' && khoiVal && rKhoi !== khoiVal && !rLop.startsWith(khoiVal)) return;
+        if (scope === 'theo_lop' && lopVal && realLop !== lopVal.trim()) return;
+        if (scope === 'theo_khoi' && khoiVal && rKhoi !== khoiVal && !realLop.startsWith(khoiVal)) return;
 
         if (!studentMap.has(mHS)) {
-          const sObj = studentFastMap.get(mHS);
           studentMap.set(mHS, {
             ma_hs: mHS,
-            ho_ten: r.ho_ten || (sObj ? sObj.ho_ten : mHS),
-            ten_lop: rLop || (sObj ? sObj.ten_lop : ''),
+            ho_ten: (sObj && sObj.ho_ten) ? sObj.ho_ten : (r.ho_ten || mHS),
+            ten_lop: realLop,
             khoi: rKhoi,
             cong: 0, tru: 0, soVang: 0, soMuon: 0, soVP: 0, hasRecords: true
           });
@@ -1875,7 +1927,10 @@
         const mHS = String(s.ma_hs).trim();
         if (!studentMap.has(mHS)) {
           studentMap.set(mHS, {
-            ma_hs: mHS, ho_ten: s.ho_ten, ten_lop: s.ten_lop, khoi: s.khoi_id,
+            ma_hs: mHS, 
+            ho_ten: s.ho_ten, 
+            ten_lop: s.ten_lop || 'Chưa xếp lớp', 
+            khoi: s.khoi_id,
             cong: 0, tru: 0, soVang: 0, soMuon: 0, soVP: 0, hasRecords: false
           });
         }
@@ -1891,7 +1946,7 @@
       const studentStats = getAggregatedStudentStats(records, scope, khoiVal, lopVal, classTotalPointsMap);
       const filterMode = document.getElementById('hs-rank-filter-mode')?.value || 'record_first';
 
-      // SẮP XẾP HỌC SINH VỚI ƯU TIÊN TÊN -> ĐỆM -> HỌ (A-Z) KHI BẰNG ĐIỂM
+      // SẮP XẾP HỌC SINH TỰ ĐỘNG THỨ TỰ TÊN -> ĐỆM -> HỌ A-Z
       studentStats.sort((a, b) => {
         let primaryDiff = 0;
 
@@ -1911,7 +1966,6 @@
           return primaryDiff;
         }
 
-        // ƯU TIÊN SẮP XẾP TÊN -> ĐỆM -> HỌ A-Z
         return compareVietnameseNamesAsc(a.ho_ten, b.ho_ten);
       });
 
@@ -1930,7 +1984,7 @@
             <td class="p-2.5 text-center font-bold text-emerald-700">${index + 1}</td>
             <td class="p-2.5 text-center font-mono font-bold text-blue-600">${st.ma_hs}</td>
             <td class="p-2.5 font-bold text-gray-800">${st.ho_ten}</td>
-            <td class="p-2.5 text-center font-semibold">${st.ten_lop}</td>
+            <td class="p-2.5 text-center font-semibold text-gray-700">${st.ten_lop}</td>
             <td class="p-2.5 text-center font-bold ${st.soVang > 0 ? 'text-red-600' : 'text-gray-400'}">${st.soVang} buổi</td>
             <td class="p-2.5 text-center font-bold ${st.soMuon > 0 || st.soVP > 0 ? 'text-amber-600' : 'text-gray-400'}">${st.soMuon + st.soVP} lần</td>
             <td class="p-2.5 text-center font-bold text-green-600">+${st.cong}</td>
@@ -2354,14 +2408,17 @@
       if (!className) { currentClassStudents = []; return []; }
       try {
         let { data } = await _supabase.from('hoc_sinh').select('*').eq('ten_lop', className.trim());
+        if (!data || data.length === 0) {
+          const resLop = await _supabase.from('hoc_sinh').select('*').eq('lop', className.trim());
+          data = resLop.data || [];
+        }
+
         currentClassStudents = (data || []).map(s => {
           const ns = String(s.ngay_sinh || s.ns || s.date_of_birth || '').trim();
           return { ma_hs: String(s.ma_hs).trim(), ho_ten: String(s.ho_ten).trim(), ten_lop: className, ngay_sinh: ns };
         });
 
-        // SẮP XẾP DANH SÁCH HỌC SINH CỦA LỚP THEO TÊN -> ĐỆM -> HỌ A-Z
         currentClassStudents.sort((a, b) => compareVietnameseNamesAsc(a.ho_ten, b.ho_ten));
-
         return currentClassStudents;
       } catch (err) { return []; }
     }
