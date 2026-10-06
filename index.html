@@ -80,9 +80,9 @@
         <div class="space-y-4">
           <!-- Ô NHẬP MÃ THỦ CÔNG -->
           <div class="bg-gray-50 p-3 rounded-xl border border-gray-200 space-y-1">
-            <label class="block text-xs font-bold text-gray-600">NHẬP MÃ HỌC SINH (Thử: 3107918900):</label>
+            <label class="block text-xs font-bold text-gray-600">NHẬP MÃ HỌC SINH HOẶC DÁN CHUỖI QR:</label>
             <div class="flex gap-2">
-              <input type="text" id="manual-ma-hs" placeholder="Nhập Mã HS..." class="flex-1 border p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono">
+              <input type="text" id="manual-ma-hs" placeholder="Nhập mã HS (Ví dụ: 3194650356)..." class="flex-1 border p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono">
               <button onclick="processManualQR()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-emerald-700 shadow">
                 Xác nhận
               </button>
@@ -130,6 +130,10 @@
         <div class="flex justify-between items-center border-b pb-2">
           <span class="text-gray-500 font-semibold">Họ và Tên:</span>
           <strong id="modal-ho-ten" class="text-blue-800 text-base">---</strong>
+        </div>
+        <div class="flex justify-between items-center border-b pb-2">
+          <span class="text-gray-500 font-semibold">Ngày Sinh:</span>
+          <span id="modal-ngay-sinh" class="text-gray-700 font-semibold">---</span>
         </div>
         <div class="flex justify-between items-center border-b pb-2">
           <span class="text-gray-500 font-semibold">Khối:</span>
@@ -191,88 +195,83 @@
       return `${y}-${m}-${d}`;
     }
 
-    // 2. TRUY VẤN DỮ LIỆU TỪ SUPABASE
+    // 2. HÀM TÁCH LẤY DUY NHẤT MÃ ĐỊNH DANH (MA_HS) TỪ CHUỖI QR
+    function extractOnlyMaHS(rawInput) {
+      if (!rawInput) return "";
+      let str = String(rawInput).trim();
+
+      // Trường hợp 1: Tách từ chuỗi có từ khóa "Mã HS:", "ma_hs:", "id:"
+      const matchLabeled = str.match(/(?:mã\s*hs|ma_hs|id|mã)\s*[:=]\s*(\d+)/i);
+      if (matchLabeled && matchLabeled[1]) {
+        return matchLabeled[1].trim();
+      }
+
+      // Trường hợp 2: Lấy dãy số từ 8 đến 12 chữ số
+      const matchDigits = str.match(/\b\d{8,12}\b/);
+      if (matchDigits) {
+        return matchDigits[0].trim();
+      }
+
+      // Trường hợp 3: Lấy toàn bộ chữ số
+      const digitsOnly = str.replace(/[^\d]/g, '');
+      return digitsOnly || str;
+    }
+
+    // 3. TRUY VẤN DỮ LIỆU TỪ SUPABASE
     async function processQRCode(qrRawText) {
       if (!qrRawText) return;
 
-      let cleanCode = String(qrRawText).trim().replace(/^["']|["']$/g, '');
+      // Bước 1: Chỉ lấy Mã định danh (mã số) để truy vấn
+      const cleanMaHS = extractOnlyMaHS(qrRawText);
       let hsData = null;
 
-      logDebugMsg(`Đang tìm kiếm mã: <b>${cleanCode}</b> trong CSDL...`);
+      logDebugMsg(`Đã trích xuất mã định danh: <b>${cleanMaHS}</b>. Đang tìm trong CSDL...`);
 
-      // TH1: Mã dạng JSON
-      try {
-        const parsed = JSON.parse(cleanCode);
-        if (parsed.ma_hs || parsed.id) {
-          cleanCode = String(parsed.ma_hs || parsed.id).trim();
-          if (parsed.lop || parsed.ten_lop) {
-            hsData = {
-              ma_hs: cleanCode,
-              ho_ten: parsed.ho_ten || parsed.hoten || "Học sinh",
-              khoi: parsed.khoi || parsed.ten_khoi || "Chưa rõ khối",
-              lop: parsed.lop || parsed.ten_lop || "Chưa phân lớp"
-            };
-          }
-        }
-      } catch (e) {}
-
-      // BƯỚC 1: Tìm theo cột 'ma_hs' trong bảng 'danh_sach'
-      if (!hsData && _supabase) {
+      // BƯỚC 2: Tìm theo cột 'ma_hs' trong bảng 'danh_sach'
+      if (_supabase && cleanMaHS) {
         try {
           const { data, error } = await _supabase
             .from('danh_sach')
             .select('*')
-            .eq('ma_hs', cleanCode)
+            .eq('ma_hs', cleanMaHS)
             .maybeSingle();
 
           if (error) {
             console.error("Lỗi danh_sach:", error);
           } else if (data) {
-            hsData = extractStudentInfo(data, cleanCode);
+            hsData = extractStudentInfo(data, cleanMaHS);
           }
         } catch (err) {
           console.error("Lỗi kết nối danh_sach:", err);
         }
       }
 
-      // BƯỚC 2: Tìm theo cột 'ma_hs' trong bảng 'hoc_sinh' (nếu chưa thấy)
-      if (!hsData && _supabase) {
+      // BƯỚC 3: Tìm trong bảng 'hoc_sinh' (nếu chưa thấy ở danh_sach)
+      if (!hsData && _supabase && cleanMaHS) {
         try {
           const { data, error } = await _supabase
             .from('hoc_sinh')
             .select('*')
-            .eq('ma_hs', cleanCode)
+            .eq('ma_hs', cleanMaHS)
             .maybeSingle();
 
           if (error) {
             console.error("Lỗi hoc_sinh:", error);
           } else if (data) {
-            hsData = extractStudentInfo(data, cleanCode);
+            hsData = extractStudentInfo(data, cleanMaHS);
           }
         } catch (err) {
           console.error("Lỗi kết nối hoc_sinh:", err);
         }
       }
 
-      // BƯỚC 3: Tìm theo cột 'id' (chỉ thực hiện nếu mã nhỏ hơn 2,1 tỷ để tránh tràn số integer)
-      if (!hsData && _supabase && !isNaN(cleanCode) && Number(cleanCode) <= 2147483647) {
-        try {
-          const { data, error } = await _supabase
-            .from('danh_sach')
-            .select('*')
-            .eq('id', Number(cleanCode))
-            .maybeSingle();
-
-          if (data) hsData = extractStudentInfo(data, cleanCode);
-        } catch (err) {}
-      }
-
-      // TH3: Nếu vẫn không tìm thấy
+      // TH3: Nếu không thấy trong CSDL
       if (!hsData) {
-        logDebugMsg(`Cảnh báo: Không tìm thấy học sinh có mã <b>${cleanCode}</b> trong CSDL.`, true);
+        logDebugMsg(`Cảnh báo: Không tìm thấy học sinh có mã <b>${cleanMaHS}</b> trong CSDL.`, true);
         hsData = {
-          ma_hs: cleanCode,
-          ho_ten: `Mã chưa có trong CSDL (${cleanCode})`,
+          ma_hs: cleanMaHS,
+          ho_ten: `Mã chưa có trong CSDL (${cleanMaHS})`,
+          ngay_sinh: "Chưa rõ",
           khoi: "Chưa rõ khối",
           lop: "Chưa phân lớp"
         };
@@ -308,6 +307,7 @@
       currentScannedStudent = {
         ma_hs: hsData.ma_hs,
         ho_ten: hsData.ho_ten,
+        ngay_sinh: hsData.ngay_sinh,
         khoi: hsData.khoi,
         lop: hsData.lop,
         actionValue: actionValue,
@@ -322,6 +322,7 @@
       // Đổ thông tin lên Modal
       document.getElementById('modal-ma-hs').innerText = currentScannedStudent.ma_hs;
       document.getElementById('modal-ho-ten').innerText = currentScannedStudent.ho_ten;
+      document.getElementById('modal-ngay-sinh').innerText = currentScannedStudent.ngay_sinh;
       document.getElementById('modal-khoi').innerText = currentScannedStudent.khoi;
       document.getElementById('modal-lop').innerText = currentScannedStudent.lop;
       document.getElementById('modal-hinh-thuc').innerText = currentScannedStudent.actionLabel;
@@ -333,18 +334,19 @@
       document.getElementById('qr-modal').classList.remove('hidden');
     }
 
-    // BÓC TÁCH DỮ LIỆU AN TOÀN TỪ RECORD CSDL
+    // BÓC TÁCH THÔNG TIN HỌC SINH TỪ BẢN GHI CSDL
     function extractStudentInfo(row, fallbackCode) {
       if (!row) return null;
       return {
         ma_hs: String(row.ma_hs || row.ma_hoc_sinh || fallbackCode).trim(),
         ho_ten: String(row.ho_ten || row.hoten || row.ten_hoc_sinh || "Chưa có tên").trim(),
+        ngay_sinh: String(row.ngay_sinh || row.ngaysinh || row.ns || row.date_of_birth || "Chưa có").trim(),
         khoi: String(row.khoi || row.ten_khoi || row.khoi_hoc || "Chưa rõ khối").trim(),
         lop: String(row.lop || row.ten_lop || row.lop_hoc || "Chưa phân lớp").trim()
       };
     }
 
-    // 3. XÁC NHẬN VÀ LƯU VÀO BẢNG 'diem_danh_master'
+    // 4. XÁC NHẬN VÀ LƯU VÀO BẢNG 'diem_danh_master'
     async function confirmSaveQR() {
       if (!currentScannedStudent) return;
 
@@ -397,7 +399,7 @@
               <span class="bg-blue-600 text-white font-extrabold px-2 py-0.5 rounded text-xs shadow-sm">Lớp: ${st.lop}</span>
             </div>
             <div class="text-gray-500">
-              Mã HS: <strong class="text-gray-700 font-mono">${st.ma_hs}</strong> • Khối: <strong>${st.khoi}</strong> •
+              Mã HS: <strong class="text-gray-700 font-mono">${st.ma_hs}</strong> • NS: <strong>${st.ngay_sinh}</strong> • Khối: <strong>${st.khoi}</strong> •
               <span class="${st.diem < 0 ? 'text-red-600 font-semibold' : 'text-emerald-600 font-semibold'}">${st.actionLabel} (${st.diem > 0 ? '+' : ''}${st.diem}đ)</span>
             </div>
           </div>
