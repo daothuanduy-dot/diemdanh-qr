@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Quét Mã QR Nề Nếp Học Sinh - THPT LHP</title>
+  <title>Quét Mã QR Nề Nếp Học Sinh</title>
 
-  <!-- THƯ VIỆN GIAO DIỆN & CSDL -->
+  <!-- THƯ VIỆN GIAO DIỆN & CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Supabase JS Client -->
@@ -66,7 +66,7 @@
         <div class="space-y-4">
           <!-- Ô NHẬP MÃ THỦ CÔNG -->
           <div class="bg-gray-50 p-3 rounded-xl border border-gray-200">
-            <label class="block text-xs font-bold text-gray-600 mb-1">HOẶC NHẬP MÃ / CHUỖI QR TẠI ĐÂY:</label>
+            <label class="block text-xs font-bold text-gray-600 mb-1">HOẶC NHẬP MÃ / CHUỖI QR TẠI ĐÂY (Thử thử với HS001, HS002...):</label>
             <div class="flex gap-2">
               <input type="text" id="manual-ma-hs" placeholder="Dán chuỗi QR hoặc nhập Mã HS..." class="flex-1 border p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
               <button onclick="processManualQR()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-emerald-700 shadow">
@@ -80,7 +80,7 @@
             <div class="flex justify-between items-center">
               <h3 class="font-bold text-sm text-gray-700">Lịch Sử Quét Trực Tiếp:</h3>
               <button onclick="triggerManualSync()" id="btn-sync-now" class="bg-amber-500 text-white text-xs px-3 py-1.5 rounded-lg font-bold hover:bg-amber-600 flex items-center gap-1 shadow-sm">
-                <i class="fa-solid fa-rotate"></i> Cập Nhật Lại (<span id="pending-count-badge">0</span>)
+                <i class="fa-solid fa-rotate"></i> Số lượt quét (<span id="pending-count-badge">0</span>)
               </button>
             </div>
 
@@ -95,7 +95,7 @@
 
   <!-- POPUP MODAL THÔNG BÁO / XÁC NHẬN KẾT QUẢ QUÉT QR -->
   <div id="qr-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center hidden p-4 transition-all">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-gray-100">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-gray-100 animate-fade-in">
       
       <div class="flex justify-between items-center border-b pb-3">
         <h3 class="text-lg font-bold text-blue-700 flex items-center gap-2">
@@ -104,7 +104,7 @@
         <button onclick="closeQRModal()" class="text-gray-400 hover:text-red-500 font-bold text-xl">&times;</button>
       </div>
 
-      <!-- BẢNG TRUY VẤN TỪ CSDL -->
+      <!-- BẢNG THÔNG TIN TỪ CSDL -->
       <div class="space-y-3 bg-slate-50 p-4 rounded-xl border text-sm">
         <div class="flex justify-between items-center border-b pb-2">
           <span class="text-gray-500 font-semibold">Mã Học Sinh:</span>
@@ -140,23 +140,39 @@
     </div>
   </div>
 
-  <!-- SCRIPT LOGIC XỬ LÝ KẾT NỐI CSDL VÀ QR -->
+  <!-- SCRIPT LOGIC XỬ LÝ -->
   <script>
-    // 1. CẤU HÌNH CSDL SUPABASE (Thay thông tin dự án của bạn tại đây)
+    // 1. CẤU HÌNH CSDL SUPABASE (Hãy thay URL và API Key thực tế của dự án bạn vào 2 biến dưới đây)
     const SUPABASE_URL = "https://your-supabase-project-url.supabase.co";
     const SUPABASE_KEY = "your-supabase-anon-key";
     
-    // Khởi tạo Supabase Client
+    // DANH SÁCH MẪU NỘI BỘ (Chạy ngay lập tức khi chưa kết nối CSDL Supabase thực)
+    const danhSachLocal = [
+      { ma_hs: "HS001", ho_ten: "Nguyễn Văn An", lop: "10A1", khoi: "10" },
+      { ma_hs: "HS002", ho_ten: "Trần Thị Bích", lop: "10A2", khoi: "10" },
+      { ma_hs: "HS003", ho_ten: "Lê Văn Cường", lop: "11B1", khoi: "11" },
+      { ma_hs: "HS004", ho_ten: "Phạm Minh Dung", lop: "12C3", khoi: "12" }
+    ];
+
     let _supabase = null;
-    if (typeof supabase !== 'undefined' && SUPABASE_URL.includes("supabase.co")) {
-      _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    if (typeof supabase !== 'undefined' && SUPABASE_URL.includes("supabase.co") && !SUPABASE_URL.includes("your-supabase-project-url")) {
+      try {
+        _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      } catch (e) {
+        console.warn("Chưa thể khởi tạo kết nối Supabase:", e);
+      }
     }
 
     let html5QrcodeScanner = null;
     let currentScannedStudent = null;
     let scanCount = 0;
 
-    // 2. TỰ ĐỘNG LẤY ĐỊNH DẠNG NGÀY DD/MM/YYYY
+    // 2. HÀM TRÍCH XUẤT TÊN LỚP TỰ ĐỘNG (Dù tên cột trong CSDL là ten_lop, lop, lop_hoc, class...)
+    function extractLopName(data) {
+      if (!data) return null;
+      return data.ten_lop || data.lop || data.lop_hoc || data.class || data.tenLop || data.class_name || null;
+    }
+
     function formatDateDDMMYYYY(dateObj) {
       const d = String(dateObj.getDate()).padStart(2, '0');
       const m = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -171,51 +187,77 @@
       return `${y}-${m}-${d}`;
     }
 
-    // 3. TRUY VẤN CSDL THEO MÃ HỌC SINH VÀ HIỂN THỊ POPUP MODAL
+    // 3. XỬ LÝ TRUY VẤN DỮ LIỆU KHI QUÉT VÀ BẬT POPUP MODAL
     async function processQRCode(qrRawText) {
       if (!qrRawText) return;
 
       let maHS = qrRawText.trim();
       let hsData = null;
 
-      // Xử lý trường hợp chuỗi QR dạng JSON {"ma_hs": "HS001", ...}
+      // TH1: Chuỗi QR là dạng JSON cấu trúc
       try {
         const parsed = JSON.parse(qrRawText);
-        if (parsed.ma_hs || parsed.id) {
-          maHS = (parsed.ma_hs || parsed.id).trim();
+        if (parsed.ma_hs || parsed.id || parsed.maHS) {
+          maHS = (parsed.ma_hs || parsed.id || parsed.maHS).toString().trim();
+          
+          // Kiểm tra xem chuỗi JSON có sẵn tên/lớp không
+          const jsonLop = extractLopName(parsed);
+          if (jsonLop || parsed.ho_ten || parsed.hoTen) {
+            hsData = {
+              ma_hs: maHS,
+              ho_ten: parsed.ho_ten || parsed.hoTen || parsed.name || "Học sinh",
+              lop: jsonLop || "Chưa phân lớp",
+              khoi: parsed.khoi || "10"
+            };
+          }
         }
       } catch (e) {
-        // Chuỗi thuần túy (Mã HS)
+        // Chuỗi thuần mã HS
       }
 
-      // TRUY VẤN VÀO CSDL SUPABASE BẢNG 'hoc_sinh'
-      if (_supabase) {
+      // TH2: Truy vấn dữ liệu thực từ CSDL SUPABASE (Nếu đã cấu hình URL/Key)
+      if (!hsData && _supabase) {
         try {
+          console.log("Đang truy vấn Supabase với mã HS:", maHS);
           const { data, error } = await _supabase
             .from('hoc_sinh')
             .select('*')
             .or(`ma_hs.eq.${maHS},id.eq.${maHS}`)
             .maybeSingle();
 
-          if (error) console.error("Lỗi truy vấn CSDL:", error);
-          if (data) hsData = data;
+          if (error) {
+            console.error("Lỗi từ Supabase:", error);
+          } else if (data) {
+            console.log("Tìm thấy học sinh trên Supabase:", data);
+            hsData = {
+              ma_hs: data.ma_hs || data.id || maHS,
+              ho_ten: data.ho_ten || data.hoTen || data.full_name || "Học sinh",
+              lop: extractLopName(data) || "Chưa phân lớp",
+              khoi: data.khoi || "10"
+            };
+          }
         } catch (err) {
-          console.error("Kết nối CSDL thất bại:", err);
+          console.error("Kết nối máy chủ CSDL thất bại:", err);
         }
       }
 
-      // Xử lý dữ liệu fallback nếu chưa kết nối CSDL hoặc không tìm thấy mã
+      // TH3: Tra cứu trong danh sách Local Fallback
+      if (!hsData) {
+        const foundLocal = danhSachLocal.find(item => item.ma_hs.toUpperCase() === maHS.toUpperCase());
+        if (foundLocal) {
+          hsData = { ...foundLocal };
+        }
+      }
+
+      // Dữ liệu mặc định cuối cùng nếu hoàn toàn không thấy mã ở đâu
       if (!hsData) {
         hsData = {
           ma_hs: maHS,
           ho_ten: `Học sinh (${maHS})`,
-          ten_lop: "Chưa phân lớp", // Thông tin lớp mặc định khi không tìm thấy
+          lop: "Chưa phân lớp",
           khoi: "10"
         };
       }
-
-      // Xác định tên Lớp học sinh
-      const tenLop = hsData.ten_lop || hsData.lop || "Chưa xác định";
 
       // Lấy hình thức vi phạm / khen thưởng đang chọn
       const actionEl = document.querySelector('input[name="qr-action"]:checked');
@@ -228,16 +270,16 @@
       else if (actionValue === 'diem_thuong') { actionLabel = "Khen thưởng (+ Điểm)"; diemCalc = 2; }
       else if (actionValue === 'diem_tru') { actionLabel = "Vi phạm (- Điểm)"; diemCalc = -2; }
 
-      // Lưu trữ thông tin học sinh hiện tại đang chờ lưu
+      // Lưu đối tượng học sinh hiện tại đang chờ xác nhận
       currentScannedStudent = {
         ma_hs: hsData.ma_hs || maHS,
-        ho_ten: hsData.ho_ten || "N/A",
-        lop: tenLop,
-        khoi: hsData.khoi || "10",
+        ho_ten: hsData.ho_ten,
+        lop: hsData.lop,
+        khoi: hsData.khoi,
         actionValue: actionValue,
         actionLabel: actionLabel,
         diem: diemCalc,
-        time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+        time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
         dateDDMMYYYY: formatDateDDMMYYYY(new Date()),
         dateYYYYMMDD: formatDateYYYYMMDD(new Date())
       };
@@ -257,7 +299,7 @@
         document.getElementById('modal-diem').className = "font-bold text-lg text-red-600";
       }
 
-      // MỞ POPUP MODAL THÔNG BÁO
+      // KÍCH HOẠT HIỂN THỊ POPUP MODAL
       document.getElementById('qr-modal').classList.remove('hidden');
     }
 
@@ -267,7 +309,7 @@
 
       const st = currentScannedStudent;
 
-      // Lưu vào CSDL Supabase (Bảng diem_danh_master)
+      // Lưu vào CSDL Supabase (Bảng diem_danh_master) nếu có kết nối
       if (_supabase) {
         try {
           await _supabase.from('diem_danh_master').insert([{
@@ -283,22 +325,22 @@
             ten_nguoi_cap_nhat: 'Bảo vệ / Cờ đỏ'
           }]);
         } catch (e) {
-          console.warn("Chưa ghi được vào Supabase DB, hiển thị bản ghi cục bộ.");
+          console.warn("Chưa ghi được vào Supabase DB thực tế, lưu giao diện cục bộ.");
         }
       }
 
-      // THÊM VÀO DANH SÁCH LỊCH SỬ DƯỚI GIAO DIỆN (CÓ THÔNG TIN LỚP)
+      // THÊM VÀO DANH SÁCH LỊCH SỬ DƯỚI GIAO DIỆN (HIỂN THỊ RÕ LỚP)
       addLogToUI(st);
 
       // ĐÓNG POPUP MODAL
       closeQRModal();
     }
 
-    // 5. THÊM BẢN GHI VÀO BẢNG LỊCH SỬ QUÉT (GIAO DIỆN)
+    // 5. THÊM DÒNG LỊCH SỬ QUÉT VÀO GIAO DIỆN
     function addLogToUI(st) {
       const logContainer = document.getElementById('qr-log-list');
 
-      // Xóa thông báo trống
+      // Xóa dòng thông báo trống
       if (logContainer.querySelector('p.italic')) {
         logContainer.innerHTML = '';
       }
@@ -318,7 +360,7 @@
           <div class="text-right shrink-0">
             <span class="text-gray-400 font-mono block text-[11px]">${st.time}</span>
             <span class="inline-flex items-center gap-1 text-[10px] text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-              <i class="fa-solid fa-circle-check"></i> Đã lưu
+              <i class="fa-solid fa-circle-check"></i> Đã ghi nhận
             </span>
           </div>
         </div>
@@ -330,12 +372,12 @@
       document.getElementById('pending-count-badge').innerText = scanCount;
     }
 
-    // 6. ĐÓNG POPUP MODAL
+    // 6. ĐÓNG POPUP MODAL VÀ TIẾP TỤC QUÉT CAMERA
     function closeQRModal() {
       document.getElementById('qr-modal').classList.add('hidden');
       currentScannedStudent = null;
 
-      // Resume camera nếu camera đang bật
+      // Resume camera nếu scanner đang khởi động
       if (html5QrcodeScanner) {
         try { html5QrcodeScanner.resume(); } catch (e) {}
       }
@@ -353,7 +395,7 @@
       input.value = '';
     }
 
-    // 8. KÍCH HOẠT CAMERA QUÉT TỨC THỜI
+    // 8. BẬT CAMERA QUÉT TỨC THỜI
     function startQRScanner() {
       if (html5QrcodeScanner) {
         stopQRScanner();
@@ -366,8 +408,8 @@
         { facingMode: "environment" },
         { fps: 10, qrbox: { width: 220, height: 220 } },
         (decodedText) => {
-          // Tạm dừng scanner để hiển thị modal
-          html5QrcodeScanner.pause();
+          // Tạm dừng scanner để mở modal
+          try { html5QrcodeScanner.pause(); } catch(e) {}
           processQRCode(decodedText);
         },
         () => {}
@@ -388,7 +430,7 @@
     }
 
     function triggerManualSync() {
-      alert(`Đã làm mới dữ liệu thành công (${scanCount} bản ghi)!`);
+      alert(`Đã làm mới dữ liệu thành công (${scanCount} lượt quét trong phiên)!`);
     }
   </script>
 </body>
