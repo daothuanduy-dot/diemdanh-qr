@@ -14,11 +14,11 @@
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
   <style>
-    /* CSS TỐI ƯU CAMERA TRÊN IOS & KHUNG QUÉT QR */
+    /* CSS TỐI ƯU HIỂN THỊ CAMERA VÀ KHUNG QUÉT SIÊU NHẠY */
     #reader {
       position: relative;
       width: 100%;
-      max-width: 320px;
+      max-width: 360px;
       aspect-ratio: 1 / 1;
       overflow: hidden !important;
       border-radius: 1rem;
@@ -34,9 +34,9 @@
 
     /* Hiệu ứng tia Laser quét QR */
     @keyframes scanLine {
-      0% { top: 5%; opacity: 0.3; }
-      50% { top: 90%; opacity: 1; }
-      100% { top: 5%; opacity: 0.3; }
+      0% { top: 8%; opacity: 0.3; }
+      50% { top: 88%; opacity: 1; }
+      100% { top: 8%; opacity: 0.3; }
     }
 
     .scan-laser {
@@ -44,9 +44,9 @@
       left: 5%;
       width: 90%;
       height: 3px;
-      background: #ef4444;
-      box-shadow: 0 0 12px #ef4444, 0 0 4px #f87171;
-      animation: scanLine 2.2s ease-in-out infinite;
+      background: #3b82f6;
+      box-shadow: 0 0 12px #3b82f6, 0 0 4px #60a5fa;
+      animation: scanLine 1.8s ease-in-out infinite;
       border-radius: 2px;
     }
   </style>
@@ -99,39 +99,43 @@
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- CỘT 1: QUÉT CAMERA CÓ KHUNG ĐỊNH DẠNG QR -->
+        <!-- CỘT 1: QUÉT CAMERA CÓ KHUNG ĐỊNH DẠNG QR TỐI ƯU -->
         <div class="flex flex-col items-center space-y-3">
           
           <!-- KHU VỰC CHỨA CAMERA & KHUNG NGẮM QR -->
-          <div class="relative w-full max-w-[320px] flex justify-center">
+          <div class="relative w-full max-w-[360px] flex justify-center">
             <div id="reader">
               <div id="camera-placeholder" class="absolute inset-0 flex flex-col items-center justify-center p-4 text-center text-gray-400 text-xs">
-                <i class="fa-solid fa-camera text-3xl mb-2 text-gray-500"></i>
-                <span id="camera-status-text">Bấm nút bên dưới để bật Camera</span>
+                <i class="fa-solid fa-camera text-4xl mb-2 text-blue-500/60"></i>
+                <span id="camera-status-text" class="font-semibold text-gray-600">Bấm nút bên dưới để mở Camera</span>
+                <span class="text-[10px] text-gray-400 mt-1">Hệ thống đã bật chế độ quét tốc độ cao HD</span>
               </div>
             </div>
 
-            <!-- LỚP KHUNG VIỀN ĐỊNH DẠNG QR (VIEWFINDER OVERLAY) -->
-            <div id="qr-overlay" class="absolute inset-0 pointer-events-none hidden flex items-center justify-center p-6">
-              <div class="w-48 h-48 sm:w-52 sm:h-52 border-2 border-blue-500/80 rounded-2xl relative shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]">
-                <!-- 4 Góc vuông bo cong tạo điểm nhấn -->
-                <div class="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-blue-400 rounded-tl-xl"></div>
-                <div class="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-blue-400 rounded-tr-xl"></div>
-                <div class="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-blue-400 rounded-bl-xl"></div>
-                <div class="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-blue-400 rounded-br-xl"></div>
+            <!-- LỚP KHUNG VIỀN ĐỊNH DẠNG QR TỐI ƯU VÙNG NHẬN DIỆN (85%) -->
+            <div id="qr-overlay" class="absolute inset-0 pointer-events-none hidden flex items-center justify-center p-4">
+              <div class="w-64 h-64 sm:w-72 sm:h-72 border-2 border-blue-400/80 rounded-2xl relative shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]">
+                <!-- 4 Góc vuông bo cong viền nổi bật -->
+                <div class="absolute -top-1 -left-1 w-7 h-7 border-t-4 border-l-4 border-blue-500 rounded-tl-xl"></div>
+                <div class="absolute -top-1 -right-1 w-7 h-7 border-t-4 border-r-4 border-blue-500 rounded-tr-xl"></div>
+                <div class="absolute -bottom-1 -left-1 w-7 h-7 border-b-4 border-l-4 border-blue-500 rounded-bl-xl"></div>
+                <div class="absolute -bottom-1 -right-1 w-7 h-7 border-b-4 border-r-4 border-blue-500 rounded-br-xl"></div>
                 
-                <!-- Tia quét Laser chạy lên xuống -->
+                <!-- Tia quét Laser -->
                 <div class="scan-laser"></div>
               </div>
             </div>
           </div>
 
-          <!-- NÚT BẬT / TẮT CAMERA -->
-          <div class="flex gap-2">
-            <button onclick="startQRScanner()" class="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 flex items-center gap-1.5 shadow-md active:scale-95 transition-all">
+          <!-- DÁY NÚT ĐIỀU KHIỂN CAMERA & ĐÈN FLASH -->
+          <div class="flex flex-wrap gap-2 justify-center">
+            <button onclick="startQRScanner()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-xl font-bold flex items-center gap-1.5 shadow-md active:scale-95 transition-all">
               <i class="fa-solid fa-camera"></i> Bật Camera Quét
             </button>
-            <button onclick="stopQRScanner()" class="bg-gray-500 text-white text-sm px-4 py-2 rounded-lg font-semibold hover:bg-gray-600 active:scale-95 transition-all">
+            <button id="btn-torch" onclick="toggleTorch()" class="hidden bg-amber-500 hover:bg-amber-600 text-white text-sm px-3 py-2 rounded-xl font-bold flex items-center gap-1 shadow-md active:scale-95 transition-all">
+              <i class="fa-solid fa-bolt"></i> Flash
+            </button>
+            <button onclick="stopQRScanner()" class="bg-gray-500 hover:bg-gray-600 text-white text-sm px-4 py-2 rounded-xl font-bold active:scale-95 transition-all">
               Tắt Camera
             </button>
           </div>
@@ -226,9 +230,8 @@
     </div>
   </div>
 
-  <!-- SCRIPT LOGIC ĐÃ FIX IOS VÀ TỐI ƯU KHUNG QUÉT -->
+  <!-- SCRIPT XỬ LÝ SIÊU TỐC VÀ TỐI ƯU CAMERA TRÊN MỌI THIẾT BỊ -->
   <script>
-    // 1. KẾT NỐI CSDL SUPABASE
     const SUPABASE_URL = "https://vbhtgkvvmwfztswxlvnl.supabase.co";
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiaHRna3Z2bXdmenRzd3hsdm5sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwMjE2MzgsImV4cCI6MjEwNjU5NzYzOH0.CqsEoBOVB4CS9UphogsIRtR1syY82kx5uzvcz_K_luo";
 
@@ -237,6 +240,7 @@
     let html5QrcodeScanner = null;
     let currentScannedStudent = null;
     let scanCount = 0;
+    let isTorchOn = false;
 
     function logDebugMsg(msg, isError = false) {
       const el = document.getElementById('system-debug-msg');
@@ -256,7 +260,6 @@
       return `${y}-${m}-${d}`;
     }
 
-    // 2. TÁCH LẤY DUY NHẤT MÃ ĐỊNH DANH (MA_HS)
     function extractOnlyMaHS(rawInput) {
       if (!rawInput) return "";
       let str = String(rawInput).trim();
@@ -275,63 +278,94 @@
       return digitsOnly || str;
     }
 
-    // 3. KHỞI TẠO CAMERA ĐƯỢC CẢI TIẾN RIÊNG CHO IOS SAFARI
+    // THUẬT TOÁN BẬT CAMERA TỐI ƯU CHO TẤT CẢ CÁC MÁY (ANDROID & IOS)
     async function startQRScanner() {
       const statusText = document.getElementById('camera-status-text');
-      if (statusText) statusText.innerText = "Đang xin quyền & khởi động Camera...";
+      if (statusText) statusText.innerText = "Đang kết nối Camera HD...";
 
-      // Nếu đang bật thì tắt luồng cũ
       if (html5QrcodeScanner) {
         await stopQRScanner();
       }
 
-      html5QrcodeScanner = new Html5Qrcode("reader");
+      html5QrcodeScanner = new Html5Qrcode("reader", { verbose: false });
 
+      // Cấu hình quét rộng (85%) & Tần số nhận diện 20fps
       const config = {
-        fps: 15,
+        fps: 20,
         qrbox: (w, h) => {
           const minEdge = Math.min(w, h);
-          const size = Math.floor(minEdge * 0.7);
+          const size = Math.floor(minEdge * 0.85); // Mở rộng 85% diện tích khung hình
           return { width: size, height: size };
         },
-        aspectRatio: 1.0
+        aspectRatio: 1.0,
+        experimentalFeatures: {
+          useBarCodeDetectorIfSupported: true // Tận dụng phần cứng GPU/NPU của máy giúp quét siêu tốc
+        }
       };
 
       try {
-        // Mở Camera Sau bằng cấu hình chuẩn nhất cho iOS
+        // Lấy danh sách camera thực tế của máy
+        const devices = await Html5Qrcode.getCameras();
+        let targetCameraId = null;
+
+        if (devices && devices.length > 0) {
+          // Lọc ưu tiên chọn Camera Chính (Loại bỏ Ultra wide / Macro / Front)
+          const backCameras = devices.filter(d => {
+            const label = d.label.toLowerCase();
+            return !label.includes('front') && !label.includes('trước') && 
+                   !label.includes('wide') && !label.includes('ultra') && 
+                   !label.includes('macro') && !label.includes('depth');
+          });
+
+          if (backCameras.length > 0) {
+            targetCameraId = backCameras[0].id;
+          } else {
+            // Trường hợp không lọc được nhãn, lấy camera sau cùng trong danh sách
+            targetCameraId = devices[devices.length - 1].id;
+          }
+        }
+
+        // Cấu hình thông số luồng hình ảnh HD & Tự động lấy nét
+        const cameraConstraints = targetCameraId 
+          ? { deviceId: { exact: targetCameraId } }
+          : { 
+              facingMode: { ideal: "environment" },
+              width: { min: 640, ideal: 1280, max: 1920 },
+              height: { min: 480, ideal: 720, max: 1080 }
+            };
+
         await html5QrcodeScanner.start(
-          { facingMode: "environment" },
+          cameraConstraints,
           config,
           onScanSuccess,
           () => {}
         );
-        onCameraSuccess();
-      } catch (err1) {
-        console.warn("Lỗi facingMode environment, đang thử phương pháp dự phòng...", err1);
+
+        onCameraStartSuccess();
+      } catch (err) {
+        console.warn("Lỗi khởi tạo theo ID, thử phương pháp dự phòng chuẩn...", err);
         try {
-          // Dự phòng dùng bất kỳ camera khả dụng nào
           await html5QrcodeScanner.start(
-            { facingMode: "user" },
+            { facingMode: "environment" },
             config,
             onScanSuccess,
             () => {}
           );
-          onCameraSuccess();
+          onCameraStartSuccess();
         } catch (err2) {
-          console.error("Lỗi bật camera:", err2);
-          logDebugMsg("<b>Không thể truy cập Camera:</b> Hãy đảm bảo bạn chọn 'Cho Phép' (Allow) khi trình duyệt Safari hỏi quyền Camera.", true);
+          console.error("Lỗi hoàn toàn camera:", err2);
+          logDebugMsg("<b>Không mở được Camera:</b> Hãy đảm bảo bạn chọn 'Cho Phép' (Allow) quyền Camera và trang web chạy HTTPS.", true);
           if (statusText) statusText.innerText = "Chưa cấp quyền Camera";
         }
       }
     }
 
-    function onCameraSuccess() {
-      // Hiển thị khung ngắm QR và ẩn chữ hướng dẫn
+    function onCameraStartSuccess() {
       document.getElementById('qr-overlay').classList.remove('hidden');
       const placeholder = document.getElementById('camera-placeholder');
       if (placeholder) placeholder.classList.add('hidden');
 
-      // ĐIỀU CHỈNH ĐẶC BIỆT DÀNH CHO IOS SAFARI: Ép phát video inline
+      // Tối ưu riêng cho Safari iOS & kiểm tra tính năng Flash
       setTimeout(() => {
         const videoElement = document.querySelector('#reader video');
         if (videoElement) {
@@ -339,7 +373,31 @@
           videoElement.setAttribute('webkit-playsinline', 'true');
           videoElement.play().catch(() => {});
         }
-      }, 300);
+
+        // Hiện nút Flash nếu thiết bị có hỗ trợ
+        try {
+          const capabilities = html5QrcodeScanner.getRunningTrackCapabilities();
+          if (capabilities && capabilities.torch) {
+            document.getElementById('btn-torch').classList.remove('hidden');
+          }
+        } catch(e) {}
+      }, 400);
+    }
+
+    // BẬT / TẮT ĐÈN FLASH
+    async function toggleTorch() {
+      if (!html5QrcodeScanner) return;
+      try {
+        isTorchOn = !isTorchOn;
+        await html5QrcodeScanner.applyVideoConstraints({
+          advanced: [{ torch: isTorchOn }]
+        });
+        const btn = document.getElementById('btn-torch');
+        btn.classList.toggle('bg-amber-500', !isTorchOn);
+        btn.classList.toggle('bg-yellow-400', isTorchOn);
+      } catch(e) {
+        console.warn("Máy không hỗ trợ bật Flash qua web", e);
+      }
     }
 
     function onScanSuccess(decodedText) {
@@ -352,29 +410,31 @@
         try {
           await html5QrcodeScanner.stop();
         } catch (e) {
-          console.warn("Lỗi tắt camera:", e);
+          console.warn("Lỗi ngắt camera:", e);
         }
         document.getElementById('qr-overlay').classList.add('hidden');
+        document.getElementById('btn-torch').classList.add('hidden');
+        isTorchOn = false;
+
         document.getElementById('reader').innerHTML = `
           <div id="camera-placeholder" class="absolute inset-0 flex flex-col items-center justify-center p-4 text-center text-gray-400 text-xs">
-            <i class="fa-solid fa-camera text-3xl mb-2 text-gray-500"></i>
-            <span id="camera-status-text">Camera đã tắt</span>
+            <i class="fa-solid fa-camera text-4xl mb-2 text-gray-400"></i>
+            <span id="camera-status-text" class="font-semibold text-gray-600">Camera đã tắt</span>
           </div>
         `;
         html5QrcodeScanner = null;
       }
     }
 
-    // 4. TRUY VẤN DỮ LIỆU TỪ SUPABASE
+    // TRUY VẤN DỮ LIỆU TỪ SUPABASE
     async function processQRCode(qrRawText) {
       if (!qrRawText) return;
 
       const cleanMaHS = extractOnlyMaHS(qrRawText);
       let hsData = null;
 
-      logDebugMsg(`Đã trích xuất mã định danh: <b>${cleanMaHS}</b>. Đang tìm trong CSDL...`);
+      logDebugMsg(`Đã nhận mã: <b>${cleanMaHS}</b>. Đang truy vấn CSDL...`);
 
-      // Tìm trong bảng 'danh_sach'
       if (_supabase && cleanMaHS) {
         try {
           const { data, error } = await _supabase
@@ -391,7 +451,6 @@
         }
       }
 
-      // Tìm trong bảng 'hoc_sinh'
       if (!hsData && _supabase && cleanMaHS) {
         try {
           const { data, error } = await _supabase
@@ -409,7 +468,7 @@
       }
 
       if (!hsData) {
-        logDebugMsg(`Cảnh báo: Không tìm thấy học sinh có mã <b>${cleanMaHS}</b> trong CSDL.`, true);
+        logDebugMsg(`Cảnh báo: Không tìm thấy học sinh mã <b>${cleanMaHS}</b> trong CSDL.`, true);
         hsData = {
           ma_hs: cleanMaHS,
           ho_ten: `Mã chưa có trong CSDL (${cleanMaHS})`,
@@ -418,7 +477,7 @@
           lop: "Chưa phân lớp"
         };
       } else {
-        logDebugMsg(`Đã tìm thấy: <b>${hsData.ho_ten}</b> - Lớp: <b>${hsData.lop}</b> - Khối: <b>${hsData.khoi}</b>`);
+        logDebugMsg(`Thành công: <b>${hsData.ho_ten}</b> - Lớp: <b>${hsData.lop}</b>`);
       }
 
       const actionEl = document.querySelector('input[name="qr-action"]:checked');
@@ -460,7 +519,6 @@
         dateYYYYMMDD: formatDateYYYYMMDD(now)
       };
 
-      // Đổ thông tin lên Modal
       document.getElementById('modal-ma-hs').innerText = currentScannedStudent.ma_hs;
       document.getElementById('modal-ho-ten').innerText = currentScannedStudent.ho_ten;
       document.getElementById('modal-ngay-sinh').innerText = currentScannedStudent.ngay_sinh;
@@ -486,7 +544,6 @@
       };
     }
 
-    // 5. LƯU DỮ LIỆU
     async function confirmSaveQR() {
       if (!currentScannedStudent) return;
 
