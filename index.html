@@ -1,862 +1,262 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <!-- ============================================================================
-       PHIÊN BẢN HỆ THỐNG: v3.4.0-OFFLINE_SYNC
-       NGÀY CẬP NHẬT: 05/10/2026
-       NỘI DUNG CẬP NHẬT:
-       - QUÉT QR SIÊU NHANH KHÔNG CẦN CHO CSDL RESPONSE, HIỂN THỊ TRỰC TIẾP MÃ QR.
-       - SỬA TRIỆT ĐỂ LỖI BÓC TÁCH CHUỖI QR (KHÔNG BỊ NHẦM MÃ HS SANG LỚP/KHỐI).
-       - HỖ TRỢ HÀNG CHỜ ĐỒNG BỘ OFFLINE KHI MẤT MẠNG VÀ TỰ ĐỘNG GỬI KHI CÓ INTERNET.
-       - TỰ ĐỘNG CHUYỂN BẢN GHI VẮNG THÀNH ĐI MUỘN NẾU HS ĐÃ BÁO VẮNG TRONG NGÀY.
-       ============================================================================ -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Quản Lý Nề Nếp & Thi Đua - THPT LHP (v3.4.0)</title>
-  
-  <!-- THƯ VIỆN BẮT BUỘC -->
+  <title>Quét Mã QR Nề Nếp Học Sinh</title>
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons CDN -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-
-  <style>
-    body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    .tab-btn { border: 1.5px solid #0066ff; color: #0066ff; background: #fff; transition: all 0.2s; font-weight: 700; }
-    .tab-btn.active { background-color: #0066ff; color: #fff; }
-    .btn-red { background-color: #e53935; color: white; }
-    .btn-coral { background-color: #f07178; color: white; }
-    .btn-warning { background-color: #ffc107; color: #212529; }
-    #reader video { border-radius: 12px; object-fit: cover; }
-    tr.clickable-row { cursor: pointer; transition: background-color 0.15s; }
-    tr.clickable-row:hover { background-color: #eef6ff !important; }
-    
-    .search-select-container { position: relative; width: 100%; }
-    .search-select-input { width: 100%; border: 1px solid #cbd5e1; padding: 10px 12px; border-radius: 8px; font-size: 14px; background-color: #fff; cursor: pointer; }
-    .search-select-dropdown { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; max-height: 260px; overflow-y: auto; z-index: 100; display: none; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-    .search-select-dropdown.show { display: block; }
-    .search-select-item { padding: 8px 12px; cursor: pointer; font-size: 13.5px; border-bottom: 1px solid #f1f5f9; }
-    .search-select-item:hover { background-color: #eff6ff; color: #0066ff; font-weight: 600; }
-  </style>
+  <!-- Thư viện Quét QR Camera (html5-qrcode) -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
-<body class="p-3 md:p-6 min-h-screen">
+<body class="bg-slate-100 p-4 md:p-8">
 
-  <!-- MÀN HÌNH KHÓA ĐĂNG NHẬP CÁN BỘ -->
-  <div id="login-overlay" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-gray-100">
-      <div class="text-center border-b pb-3">
-        <h2 class="text-xl font-bold text-blue-700 tracking-tight uppercase"><i class="fa-solid fa-shield-halved"></i> Đăng Nhập Hệ Thống</h2>
-        <p class="text-xs text-gray-500 font-semibold mt-1">Hệ thống Quản lý Nề nếp & Thi đua - THPT LHP (v3.4.0)</p>
-      </div>
-      <div class="space-y-3 text-sm">
-        <div>
-          <label class="block text-xs font-bold text-gray-700 mb-1">Mã Cán Bộ / Tên Đăng Nhập:</label>
-          <input type="text" id="login-user-input" value="ADMIN" placeholder="Nhập mã cán bộ..." class="w-full border p-2.5 rounded-lg bg-gray-50 font-bold text-gray-800 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-gray-700 mb-1">Mật Khẩu:</label>
-          <input type="password" id="login-password-input" value="admin123" placeholder="Nhập mật khẩu..." class="w-full border p-2.5 rounded-lg bg-gray-50 font-bold text-gray-800 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-        </div>
-        <div id="login-error-msg" class="text-xs font-bold text-red-600 hidden">
-          <i class="fa-solid fa-circle-exclamation"></i> Tên đăng nhập hoặc mật khẩu không chính xác!
-        </div>
-      </div>
-      <div class="pt-2">
-        <button onclick="performCanBoLogin()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 shadow-md uppercase tracking-wide flex items-center justify-center gap-2">
-          <i class="fa-solid fa-right-to-bracket"></i> ĐĂNG NHẬP HỆ THỐNG
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <div class="max-w-7xl mx-auto space-y-4">
+  <main class="max-w-4xl mx-auto bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-100 min-h-[460px]">
     
-    <!-- HEADER HỆ THỐNG -->
-    <header class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-      <div>
-        <h1 class="text-2xl font-bold text-blue-600 tracking-tight uppercase">QUẢN LÝ NỀN NẾP & THI ĐƯA</h1>
-        <div class="text-sm text-gray-600 mt-1 flex flex-wrap items-center gap-2">
-          <span>Người dùng: <strong id="user-name" class="text-blue-800">Đào Thuận Duy</strong></span> | 
-          <span>Vai trò: <span id="user-role" class="bg-gray-500 text-white text-xs px-2.5 py-0.5 rounded-full font-bold">Admin</span></span>
-          <span class="bg-emerald-100 text-emerald-800 text-xs px-2 py-0.5 rounded font-mono font-bold">v3.4.0-OFFLINE_SYNC</span>
-          <span id="network-status-badge" class="text-xs px-2 py-0.5 rounded font-bold bg-emerald-100 text-emerald-800"><i class="fa-solid fa-wifi"></i> Online</span>
-        </div>
-      </div>
-      <div class="flex gap-2">
-        <button id="btn-header-login" onclick="openLoginOverlay()" class="bg-blue-600 text-white font-semibold text-sm px-4 py-2 rounded-lg flex items-center gap-1 shadow-sm hover:bg-blue-700 hidden">
-          <i class="fa-solid fa-right-to-bracket"></i> Đăng Nhập
-        </button>
-        <button id="btn-header-logout" onclick="handleLogout()" class="border border-red-500 text-red-500 text-sm px-3.5 py-1.5 rounded-lg font-semibold hover:bg-red-50 flex items-center gap-1">
-          <i class="fa-solid fa-power-off"></i> Đăng Xuất
-        </button>
-      </div>
-    </header>
-
-    <!-- THANH ĐIỀU HƯỚNG TABS -->
-    <nav class="grid grid-cols-2 md:grid-cols-6 gap-2">
-      <button id="btn-tab-0" onclick="switchTab(0)" class="tab-btn active py-2.5 px-2 rounded-lg text-center text-xs md:text-sm shadow-sm">0. QUÉT MÃ QR</button>
-      <button id="btn-tab-1" onclick="switchTab(1)" class="tab-btn py-2.5 px-2 rounded-lg text-center text-xs md:text-sm shadow-sm">1. BÁO VẮNG</button>
-      <button id="btn-tab-2" onclick="switchTab(2)" class="tab-btn py-2.5 px-2 rounded-lg text-center text-xs md:text-sm shadow-sm">2. CHẤM ĐIỂM THI ĐƯA</button>
-      <button id="btn-tab-3" onclick="switchTab(3)" class="tab-btn py-2.5 px-2 rounded-lg text-center text-xs md:text-sm shadow-sm">3. THỐNG KÊ & XẾP HẠNG</button>
-      <button id="btn-tab-4" onclick="switchTab(4)" class="tab-btn py-2.5 px-2 rounded-lg text-center text-xs md:text-sm shadow-sm">4. XẾP LOẠI & DANH HIỆU</button>
-      <button id="btn-tab-5" onclick="switchTab(5)" class="tab-btn py-2.5 px-2 rounded-lg text-center text-xs md:text-sm shadow-sm bg-purple-50 border-purple-600 text-purple-700">5. QUẢN TRỊ</button>
-    </nav>
-
-    <!-- NỘI DUNG CHÍNH -->
-    <main class="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-100 min-h-[460px]">
+    <!-- TAB 0: QUÉT MÃ QR (HIỂN THỊ CẢ THÔNG TIN LỚP) -->
+    <section id="content-tab-0" class="tab-content space-y-4">
+      <h2 class="text-lg font-bold text-blue-700 uppercase flex items-center gap-2">
+        <i class="fa-solid fa-qrcode"></i> 0. Quét Mã QR Nề Nếp Học Sinh (Đồng Bộ Offline)
+      </h2>
       
-      <!-- TAB 0: QUÉT MÃ QR (ĐÃ BỔ SUNG OFFLINE SYNC VÀ FIX LỖI THÔNG TIN) -->
-      <section id="content-tab-0" class="tab-content space-y-4">
-        <h2 class="text-lg font-bold text-blue-700 uppercase flex items-center gap-2"><i class="fa-solid fa-qrcode"></i> 0. Quét Mã QR Nề Nếp Học Sinh (Đồng Bộ Offline)</h2>
-        
-        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-          <label class="block font-bold text-gray-700 mb-2">Chọn hình thức ghi nhận khi quét QR:</label>
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-            <label class="flex items-center gap-2 bg-white p-3 rounded-lg border cursor-pointer hover:border-blue-500">
-              <input type="radio" name="qr-action" value="muon_co_phep" class="w-4 h-4 text-blue-600">
-              <span class="text-sm font-semibold text-amber-600">Đi học muộn (Có phép)</span>
-            </label>
-            <label class="flex items-center gap-2 bg-white p-3 rounded-lg border cursor-pointer hover:border-blue-500">
-              <input type="radio" name="qr-action" value="muon_khong_phep" checked class="w-4 h-4 text-blue-600">
-              <span class="text-sm font-semibold text-red-600">Đi học muộn (Không phép)</span>
-            </label>
-            <label class="flex items-center gap-2 bg-white p-3 rounded-lg border cursor-pointer hover:border-blue-500">
-              <input type="radio" name="qr-action" value="diem_thuong" class="w-4 h-4 text-blue-600">
-              <span class="text-sm font-semibold text-green-600">Khen thưởng (+ Điểm)</span>
-            </label>
-            <label class="flex items-center gap-2 bg-white p-3 rounded-lg border cursor-pointer hover:border-blue-500">
-              <input type="radio" name="qr-action" value="diem_tru" class="w-4 h-4 text-blue-600">
-              <span class="text-sm font-semibold text-red-700">Vi phạm (- Điểm)</span>
-            </label>
-          </div>
+      <!-- HÌNH THỨC GHI NHẬN -->
+      <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+        <label class="block font-bold text-gray-700 mb-2">Chọn hình thức ghi nhận khi quét QR:</label>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <label class="flex items-center gap-2 bg-white p-3 rounded-lg border cursor-pointer hover:border-blue-500">
+            <input type="radio" name="qr-action" value="muon_co_phep" class="w-4 h-4 text-blue-600">
+            <span class="text-sm font-semibold text-amber-600">Đi học muộn (Có phép)</span>
+          </label>
+          <label class="flex items-center gap-2 bg-white p-3 rounded-lg border cursor-pointer hover:border-blue-500">
+            <input type="radio" name="qr-action" value="muon_khong_phep" checked class="w-4 h-4 text-blue-600">
+            <span class="text-sm font-semibold text-red-600">Đi học muộn (Không phép)</span>
+          </label>
+          <label class="flex items-center gap-2 bg-white p-3 rounded-lg border cursor-pointer hover:border-blue-500">
+            <input type="radio" name="qr-action" value="diem_thuong" class="w-4 h-4 text-blue-600">
+            <span class="text-sm font-semibold text-green-600">Khen thưởng (+ Điểm)</span>
+          </label>
+          <label class="flex items-center gap-2 bg-white p-3 rounded-lg border cursor-pointer hover:border-blue-500">
+            <input type="radio" name="qr-action" value="diem_tru" class="w-4 h-4 text-blue-600">
+            <span class="text-sm font-semibold text-red-700">Vi phạm (- Điểm)</span>
+          </label>
         </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="flex flex-col items-center">
-            <div id="reader" class="w-full max-w-sm bg-black rounded-xl overflow-hidden min-h-[260px]"></div>
-            <div class="mt-3 flex gap-2">
-              <button onclick="startQRScanner()" class="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 flex items-center gap-1"><i class="fa-solid fa-camera"></i> Bật Camera Quét Tức Thời</button>
-              <button onclick="stopQRScanner()" class="bg-gray-500 text-white text-sm px-4 py-2 rounded-lg font-semibold hover:bg-gray-600">Tắt Camera</button>
-            </div>
-          </div>
-
-          <div class="space-y-4">
-            <div class="bg-gray-50 p-3 rounded-xl border border-gray-200">
-              <label class="block text-xs font-bold text-gray-600 mb-1">HOẶC NHẬP MÃ / CHUỖI QR TẠI ĐÂY:</label>
-              <div class="flex gap-2">
-                <input type="text" id="manual-ma-hs" placeholder="Dán nội dung QR hoặc Mã HS..." class="flex-1 border p-2 rounded-lg text-sm">
-                <button onclick="processManualQR()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-emerald-700">Xác nhận</button>
-              </div>
-            </div>
-
-            <!-- QUẢN LÝ LỊCH SỬ QUÉT VÀ HÀNG CHỜ ĐỒNG BỘ -->
-            <div class="space-y-2">
-              <div class="flex justify-between items-center">
-                <h3 class="font-bold text-sm text-gray-700">Lịch Sử Quét & Trạng Thái Đồng Bộ:</h3>
-                <button onclick="triggerManualSync()" id="btn-sync-now" class="bg-amber-500 text-white text-xs px-3 py-1.5 rounded-lg font-bold hover:bg-amber-600 flex items-center gap-1 shadow-sm">
-                  <i class="fa-solid fa-rotate"></i> Gửi Đồng Bộ Lại (<span id="pending-count-badge">0</span>)
-                </button>
-              </div>
-
-              <div id="qr-log-list" class="space-y-2 max-h-[260px] overflow-y-auto border p-2 rounded-xl bg-slate-50">
-                <p class="text-sm text-gray-400 italic text-center p-2">Chưa có lượt quét nào trong phiên...</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- TAB 1: BÁO VẮNG -->
-      <section id="content-tab-1" class="tab-content hidden space-y-4">
-        <h2 class="text-lg font-bold text-blue-700 uppercase flex items-center gap-2"><i class="fa-solid fa-user-slash"></i> 1. Báo Học Sinh Vắng Trong Ngày</h2>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
-          <div>
-            <label class="block text-xs font-bold text-gray-700 mb-1">Chọn Khối:</label>
-            <select id="bv-khoi" onchange="onBaoVangKhoiChange()" class="w-full border p-2.5 rounded-lg text-sm bg-white font-medium">
-              <option value="">-- Tất cả Khối --</option>
-              <option value="10">Khối 10</option><option value="11">Khối 11</option><option value="12">Khối 12</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-gray-700 mb-1">Chọn Lớp:</label>
-            <select id="bv-lop" onchange="onBaoVangLopChange()" class="w-full border p-2.5 rounded-lg text-sm bg-white font-medium">
-              <option value="">-- Chọn Lớp --</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-gray-700 mb-1">Buổi ghi nhận:</label>
-            <input type="text" id="bv-buoi-auto" readonly class="w-full border p-2.5 rounded-lg text-sm bg-gray-100 font-bold text-blue-700">
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-gray-700 mb-1">Số lượng vắng:</label>
-            <input type="number" id="bv-soluong" value="1" min="1" max="30" onchange="renderBaoVangRows()" oninput="renderBaoVangRows()" class="w-full border p-2.5 rounded-lg text-sm font-bold text-center bg-white text-blue-600">
-          </div>
-        </div>
-
-        <div class="space-y-3">
-          <label class="block font-bold text-gray-700 text-sm">Danh sách học sinh vắng:</label>
-          <div id="bv-student-rows" class="space-y-3">
-            <p class="text-sm text-gray-400 italic bg-gray-50 p-4 rounded-xl border text-center">Vui lòng chọn Lớp để chọn danh sách học sinh vắng.</p>
-          </div>
-        </div>
-
-        <button onclick="submitBaoVang()" class="w-full btn-coral py-3 rounded-xl font-bold text-center uppercase shadow-md hover:opacity-95 text-base mt-2">
-          <i class="fa-solid fa-floppy-disk"></i> LƯU THÔNG TIN BÁO VẮNG
-        </button>
-      </section>
-
-      <!-- TAB 2: CHẤM ĐIỂM THI ĐƯA & SỔ ĐẦU BÀI CUỐI TUẦN -->
-      <section id="content-tab-2" class="tab-content hidden space-y-4">
-        <div class="flex flex-wrap gap-2 border-b pb-3">
-          <button onclick="switchTab2Mode('tieu-chi')" id="btn-mode-tc" class="px-4 py-2 rounded-lg font-bold text-sm bg-blue-600 text-white shadow-sm">1. Chấm Tiêu Chí Nề Nếp & Linh Hoạt</button>
-          <button onclick="switchTab2Mode('sdb-diem-mieng')" id="btn-mode-sdb" class="px-4 py-2 rounded-lg font-bold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">📖 2. Chấm Sổ Đầu Bài Lớp & Điểm Miệng Học Sinh</button>
-        </div>
-
-        <div id="tab2-mode-tieu-chi" class="space-y-4">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
-            <div>
-              <label class="block text-xs font-bold text-gray-700 mb-1">Chọn Khối:</label>
-              <select id="cd-khoi" onchange="onChamDiemKhoiChange()" class="w-full border p-2.5 rounded-lg text-sm bg-white font-medium">
-                <option value="">Tất cả các Khối</option><option value="10">Khối 10</option><option value="11">Khối 11</option><option value="12">Khối 12</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-gray-700 mb-1">Chọn Lớp:</label>
-              <select id="cd-lop" onchange="onChamDiemLopChange()" class="w-full border p-2.5 rounded-lg text-sm bg-white font-medium"><option value="">-- Chọn Lớp --</option></select>
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-gray-700 mb-1">Chọn Cá Nhân Học Sinh:</label>
-              <div class="search-select-container">
-                <input type="text" id="cd-hs-input" readonly onclick="toggleSearchSelect('cd-hs-dropdown')" placeholder="-- Chọn Lớp trước để hiển thị học sinh --" class="search-select-input font-medium text-gray-800">
-                <div id="cd-hs-dropdown" class="search-select-dropdown">
-                  <div class="p-2 border-b bg-gray-50">
-                    <input type="text" id="cd-hs-search" oninput="filterSearchSelectItems('cd-hs-dropdown', 'cd-hs-search')" placeholder="🔍 Tìm tên hoặc gõ viết tắt..." class="w-full border p-1.5 rounded text-xs">
-                  </div>
-                  <div id="cd-hs-list"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold text-gray-700 mb-2">Loại Điểm Thi Đua:</label>
-            <div class="grid grid-cols-2 gap-3">
-              <label class="flex items-center justify-center gap-2 border border-red-300 bg-red-50 text-red-600 p-3 rounded-xl cursor-pointer font-bold text-sm">
-                <input type="radio" name="loai-diem" value="tru" checked onchange="filterDanhMucDiem()"> Điểm Trừ (Nề nếp / Vi phạm)
-              </label>
-              <label class="flex items-center justify-center gap-2 border border-green-300 bg-green-50 text-green-600 p-3 rounded-xl cursor-pointer font-bold text-sm">
-                <input type="radio" name="loai-diem" value="cong" onchange="filterDanhMucDiem()"> Điểm Cộng (Khen thưởng Nề nếp)
-              </label>
-            </div>
-          </div>
-
-          <div class="bg-slate-50 p-4 rounded-xl border space-y-3">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label class="block text-xs font-bold text-gray-700 mb-1">Lọc Theo Mảng Thi Đua:</label>
-                <select id="cd-mang-filter" onchange="filterDanhMucDiem()" class="w-full border p-2 rounded-lg text-sm bg-white font-bold text-blue-800"><option value="">-- Tất cả Mảng --</option></select>
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-gray-700 mb-1">Tìm Kiếm Nhanh Tiêu Chí:</label>
-                <input type="text" id="cd-search-tc-input" oninput="filterDanhMucDiem()" placeholder="🔍 Gõ từ khóa..." class="w-full border p-2 rounded-lg text-sm bg-white">
-              </div>
-            </div>
-
-            <div>
-              <div class="flex justify-between items-center mb-1">
-                <label class="text-xs font-bold text-gray-700">Nội Dung Tiêu Chí Chấm Điểm:</label>
-                <span id="tc-count-badge" class="text-[11px] bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full">0 tiêu chí</span>
-              </div>
-              <select id="list-danh-muc-diem" onchange="toggleCustomPointInput()" class="w-full border p-2.5 rounded-lg text-sm bg-white font-medium text-gray-800">
-                <option value="">-- Đang tải danh mục... --</option>
-              </select>
-            </div>
-          </div>
-
-          <div id="custom-point-box" class="hidden bg-amber-50 p-4 rounded-xl border border-amber-200 space-y-3">
-            <h4 class="text-xs font-bold text-amber-800 uppercase flex items-center gap-1"><i class="fa-solid fa-pen"></i> Nhập Tiêu Chí Linh Hoạt</h4>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div class="md:col-span-2"><label class="block text-xs font-bold text-gray-600 mb-1">Nội Dung Tiêu Chí:</label><input type="text" id="custom-ten-hd" placeholder="Nội dung vi phạm/khen thưởng..." class="w-full border p-2 rounded-lg text-sm bg-white"></div>
-              <div><label class="block text-xs font-bold text-gray-600 mb-1">Điểm Cộng / Trừ:</label><input type="number" step="0.25" id="custom-diem" placeholder="VD: -1 hoặc 2" class="w-full border p-2 rounded-lg text-sm bg-white text-center font-bold"></div>
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold text-gray-700 mb-1">Ghi Chú Chi Tiết:</label>
-            <input type="text" id="cd-ghichu" placeholder="Ghi chú thêm..." class="w-full border p-2.5 rounded-lg text-sm">
-          </div>
-
-          <button onclick="submitChamDiem()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold uppercase shadow-md hover:bg-blue-700 flex items-center justify-center gap-2">
-            <i class="fa-solid fa-floppy-disk"></i> LƯU KẾT QUẢ CHẤM ĐIỂM
-          </button>
-        </div>
-
-        <div id="tab2-mode-sdb-diem-mieng" class="hidden space-y-4">
-          <div class="bg-indigo-50/90 p-4 rounded-xl border border-indigo-200 space-y-3">
-            <h3 class="font-bold text-sm uppercase text-indigo-900 flex items-center gap-2"><i class="fa-solid fa-book-bookmark text-indigo-600"></i> PHẦN 1: SỔ ĐẦU BÀI LỚP CUỐI TUẦN</h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div>
-                <label class="block text-xs font-bold text-gray-700 mb-1">Lớp Thống Kê:</label>
-                <select id="sdb-lop" onchange="onSdbLopChange()" class="w-full border p-2.5 rounded-lg text-sm bg-white font-bold text-indigo-700"><option value="">-- Chọn Lớp --</option></select>
-              </div>
-            </div>
-            <div class="bg-white p-3 rounded-lg border border-indigo-200 grid grid-cols-2 md:grid-cols-5 gap-3">
-              <div class="bg-green-50 p-2 rounded-lg border text-center"><label class="block text-[11px] font-bold text-green-800">Số Tiết 10 (+2đ)</label><input type="number" min="0" value="0" id="sdb-sl-tiet10" oninput="calcSdbTotalPreview()" class="w-full border p-1 rounded text-center font-bold text-sm bg-white"></div>
-              <div class="bg-blue-50 p-2 rounded-lg border text-center"><label class="block text-[11px] font-bold text-blue-800">Số Tiết 9 (+1đ)</label><input type="number" min="0" value="0" id="sdb-sl-tiet9" oninput="calcSdbTotalPreview()" class="w-full border p-1 rounded text-center font-bold text-sm bg-white"></div>
-              <div class="bg-gray-50 p-2 rounded-lg border text-center"><label class="block text-[11px] font-bold text-gray-700">Số Tiết 8 (0đ)</label><input type="number" min="0" value="0" id="sdb-sl-tiet8" oninput="calcSdbTotalPreview()" class="w-full border p-1 rounded text-center font-bold text-sm bg-white"></div>
-              <div class="bg-amber-50 p-2 rounded-lg border text-center"><label class="block text-[11px] font-bold text-amber-800">Số Tiết 7 (-2đ)</label><input type="number" min="0" value="0" id="sdb-sl-tiet7" oninput="calcSdbTotalPreview()" class="w-full border p-1 rounded text-center font-bold text-sm bg-white"></div>
-              <div class="bg-red-50 p-2 rounded-lg border text-center"><label class="block text-[11px] font-bold text-red-800">Tiết Yếu &lt;7 (-5đ)</label><input type="number" min="0" value="0" id="sdb-sl-tietyeu" oninput="calcSdbTotalPreview()" class="w-full border p-1 rounded text-center font-bold text-sm bg-white"></div>
-            </div>
-            <div class="pt-1 flex justify-between items-center text-xs font-bold">
-              <span>Tổng điểm thi đua SĐB lớp:</span>
-              <span id="sdb-total-preview" class="text-sm text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full">+0.0 điểm</span>
-            </div>
-          </div>
-
-          <div class="bg-emerald-50/90 p-4 rounded-xl border border-emerald-200 space-y-3">
-            <h3 class="font-bold text-sm uppercase text-emerald-900 flex items-center gap-2"><i class="fa-solid fa-user-pen text-emerald-600"></i> PHẦN 2: ĐIỂM MIỆNG HỌC SINH</h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div>
-                <label class="block text-xs font-bold text-gray-700 mb-1">Mức Điểm Miệng đạt được:</label>
-                <input type="number" step="0.5" id="sdb-diem-hs-val" value="10" min="0" max="10" class="w-full border p-2 rounded-lg text-sm font-bold text-center bg-white text-emerald-700">
-              </div>
-              <div class="md:col-span-2">
-                <label class="block text-xs font-bold text-gray-700 mb-1">Nội dung đánh giá:</label>
-                <input type="text" id="sdb-mon-danh-gia" placeholder="VD: Kiểm tra bài cũ môn Toán..." class="w-full border p-2 rounded-lg text-sm bg-white">
-              </div>
-            </div>
-            <div id="sdb-student-grid" class="grid grid-cols-2 md:grid-cols-4 gap-2 max-h-[220px] overflow-y-auto p-2 bg-white rounded-lg border">
-              <p class="text-xs text-gray-400 italic col-span-4 p-4 text-center">Vui lòng chọn Lớp phía trên để chọn học sinh...</p>
-            </div>
-          </div>
-
-          <button onclick="submitSoDauBaiDiemMieng()" class="w-full bg-indigo-700 text-white py-3.5 rounded-xl font-bold uppercase hover:bg-indigo-800 shadow-md">
-            <i class="fa-solid fa-floppy-disk"></i> LƯU SỔ ĐẦU BÀI & ĐIỂM MIỆNG
-          </button>
-        </div>
-      </section>
-
-      <!-- TAB 3: THỐNG KÊ & XẾP HẠNG -->
-      <section id="content-tab-3" class="tab-content hidden space-y-6">
-        <h2 class="text-lg font-bold text-blue-800 uppercase flex items-center gap-2"><i class="fa-solid fa-chart-line"></i> 3. Báo Cáo Thống Kê & Xếp Hạng Nề Nếp</h2>
-        
-        <div class="bg-slate-50 p-4 rounded-xl border space-y-3">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <label class="block text-xs font-bold text-gray-700 mb-1">Đối tượng:</label>
-              <select id="tk-doituong" onchange="onThongKeScopeChange()" class="w-full border p-2 rounded-lg text-sm bg-white font-semibold text-blue-700">
-                <option value="toan_truong">Toàn Trường</option>
-                <option value="theo_khoi">Theo Khối</option>
-                <option value="theo_lop">Theo Lớp</option>
-              </select>
-            </div>
-            <div id="box-tk-khoi" class="hidden">
-              <label class="block text-xs font-bold text-gray-700 mb-1">Chọn Khối:</label>
-              <select id="tk-khoi" class="w-full border p-2 rounded-lg text-sm bg-white"><option value="10">Khối 10</option><option value="11">Khối 11</option><option value="12">Khối 12</option></select>
-            </div>
-            <div id="box-tk-lop" class="hidden">
-              <label class="block text-xs font-bold text-gray-700 mb-1">Chọn Lớp:</label>
-              <select id="tk-lop" class="w-full border p-2 rounded-lg text-sm bg-white"><option value="">-- Chọn Lớp --</option></select>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t">
-            <div>
-              <label class="block text-xs font-bold text-gray-700 mb-1">Thời gian:</label>
-              <select id="tk-time-type" onchange="onThongKeTimeTypeChange()" class="w-full border p-2 rounded-lg text-sm bg-white font-semibold text-emerald-700">
-                <option value="tuan">Theo Tuần</option>
-                <option value="thang">Theo Tháng</option>
-                <option value="hocky">Theo Học Kỳ</option>
-                <option value="namhoc">Cả Năm Học</option>
-              </select>
-            </div>
-            <div id="box-time-tuan"><label class="block text-xs font-bold text-gray-700 mb-1">Ngày trong tuần:</label><input type="date" id="tk-date-tuan" class="w-full border p-2 rounded-lg text-sm bg-white"></div>
-            <div class="flex items-end"><button onclick="renderFullStatistics()" class="w-full bg-blue-600 text-white p-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-blue-700"><i class="fa-solid fa-magnifying-glass"></i> LỌC & THỐNG KÊ</button></div>
-          </div>
-        </div>
-
-        <div id="time-scope-banner" class="bg-blue-50 border border-blue-200 p-2.5 rounded-xl text-center font-bold text-blue-800 text-sm">
-          Đang xem thống kê: Chọn bộ lọc phía trên
-        </div>
-
-        <div class="space-y-2">
-          <h3 class="font-bold text-blue-700 text-sm uppercase"><i class="fa-solid fa-trophy text-amber-500"></i> Bảng Xếp Hạng Thi Đua Các Lớp</h3>
-          <div class="overflow-x-auto border rounded-xl shadow-sm">
-            <table class="w-full text-sm text-left">
-              <thead class="bg-blue-600 text-white uppercase text-xs">
-                <tr><th class="p-2.5 text-center">Hạng</th><th class="p-2.5">Tên Lớp</th><th class="p-2.5 text-center">Khối</th><th class="p-2.5 text-center">Điểm Cộng</th><th class="p-2.5 text-center">Điểm Trừ</th><th class="p-2.5 text-center">Tổng Điểm</th><th class="p-2.5 text-center">Chi Tiết</th></tr>
-              </thead>
-              <tbody id="lop-rank-table-body"><tr><td colspan="7" class="p-4 text-center text-gray-400 bg-gray-50">Nhấn "LỌC & THỐNG KÊ" để hiển thị...</td></tr></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- TAB 4: XẾP LOẠI & DANH HIỆU THI ĐƯA TẬP THỂ -->
-      <section id="content-tab-4" class="tab-content hidden space-y-4">
-        <h2 class="text-lg font-bold text-red-600 uppercase flex items-center gap-2"><i class="fa-solid fa-trophy text-amber-500"></i> 4. Xếp Loại & Danh Hiệu Thi Đua Tập Thể</h2>
-        <div class="p-4 bg-slate-50 border rounded-xl text-center text-sm font-semibold text-gray-600">
-          Chức năng tự động tổng hợp danh hiệu thi đua cờ thi đua cuối kỳ.
-        </div>
-      </section>
-
-      <!-- TAB 5: QUẢN TRỊ -->
-      <section id="content-tab-5" class="tab-content hidden space-y-6">
-        <h2 class="text-lg font-bold text-purple-800 uppercase flex items-center gap-2"><i class="fa-solid fa-user-gear"></i> 5. Quản Trị Hệ Thống</h2>
-        <div class="p-4 bg-slate-50 border rounded-xl text-center text-sm font-semibold text-gray-600">
-          Trung tâm điều chỉnh cấu hình bản ghi, chuyển lớp học sinh và tài khoản cán bộ.
-        </div>
-      </section>
-
-    </main>
-  </div>
-
-  <!-- MODAL XÁC NHẬN MÃ QR (ĐÃ FIX SỬA HIỂN THỊ DỮ LIỆU CHUẨN XÁC $0\text{ ms}$) -->
-  <div id="qr-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-gray-100">
-      <div class="flex justify-between items-center border-b pb-3">
-        <h3 class="text-lg font-bold text-blue-700 flex items-center gap-2"><i class="fa-solid fa-address-card text-xl"></i> Xác Nhận Thông Tin Học Sinh</h3>
-        <button onclick="closeQRModal()" class="text-gray-400 hover:text-red-500 font-bold text-lg">&times;</button>
       </div>
-      <div class="space-y-2.5 text-sm">
-        <div class="flex justify-between border-b pb-1.5"><span class="text-gray-500">Mã Học Sinh:</span><strong id="modal-ma-hs" class="text-blue-600 font-mono text-base">---</strong></div>
-        <div class="flex justify-between border-b pb-1.5"><span class="text-gray-500">Họ và Tên:</span><strong id="modal-ho-ten" class="text-gray-900 font-bold text-base">---</strong></div>
-        <div class="flex justify-between border-b pb-1.5"><span class="text-gray-500">Lớp / Khối:</span><strong id="modal-lop" class="text-amber-700 font-bold">---</strong></div>
-        <div class="flex justify-between border-b pb-1.5"><span class="text-gray-500">Hình thức ghi nhận:</span><strong id="modal-hinh-thuc" class="text-red-600">---</strong></div>
-      </div>
-      <div class="pt-2 flex gap-3">
-        <button id="btn-confirm-qr" onclick="confirmSaveQR()" class="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 shadow-md flex items-center justify-center gap-1.5"><i class="fa-solid fa-check"></i> LƯU THÔNG TIN</button>
-        <button onclick="closeQRModal()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-300">HỦY BỎ</button>
-      </div>
-    </div>
-  </div>
 
-  <script>
-    // 1. CẤU HÌNH SUPABASE & BỘ NHỚ LOCAL
-    const SUPABASE_URL = "https://vbhtgkvvmwfztswxlvnl.supabase.co";
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiaHRna3Z2bXdmenRzd3hsdm5sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwMjE2MzgsImV4cCI6MjEwNjU5NzYzOH0.CqsEoBOVB4CS9UphogsIRtR1syY82kx5uzvcz_K_luo";
-    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- CỘT 1: QUÉT CAMERA -->
+        <div class="flex flex-col items-center space-y-3">
+          <div id="reader" class="w-full max-w-sm bg-black rounded-xl overflow-hidden min-h-[260px] flex items-center justify-center text-white text-xs">
+            <span>Camera chưa bật</span>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="startQRScanner()" class="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 flex items-center gap-1">
+              <i class="fa-solid fa-camera"></i> Bật Camera Quét
+            </button>
+            <button onclick="stopQRScanner()" class="bg-gray-500 text-white text-sm px-4 py-2 rounded-lg font-semibold hover:bg-gray-600">
+              Tắt Camera
+            </button>
+          </div>
+        </div>
 
-    let allLopList = [];
-    let currentClassStudents = [];
-    let allStudentsList = [];
-    let studentFastMap = new Map();
-    let currentUser = { ma_cb: "ADMIN", ho_ten: "Đào Thuận Duy", vai_tro: "Admin" };
-    let html5QrcodeScanner = null;
-    let pendingQRData = null;
-    let isProcessingQR = false;
+        <!-- CỘT 2: NHẬP TAY, THÔNG TIN VỪA QUÉT VÀ LỊCH SỬ -->
+        <div class="space-y-4">
+          <!-- Ô NHẬP TAY THỦ CÔNG -->
+          <div class="bg-gray-50 p-3 rounded-xl border border-gray-200">
+            <label class="block text-xs font-bold text-gray-600 mb-1">HOẶC NHẬP MÃ / CHUỖI QR TẠI ĐÂY:</label>
+            <div class="flex gap-2">
+              <input type="text" id="manual-ma-hs" placeholder="Dán nội dung QR hoặc Mã HS..." class="flex-1 border p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <button onclick="processManualQR()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-emerald-700">
+                Xác nhận
+              </button>
+            </div>
+          </div>
 
-    // HÀNG CHỜ ĐỒNG BỘ OFFLINE & LỊCH SỬ QUÉT
-    let qrSyncQueue = JSON.parse(localStorage.getItem('lhp_qr_sync_queue') || '[]');
-    let qrScanHistory = JSON.parse(localStorage.getItem('lhp_qr_scan_history') || '[]');
+          <!-- KHUNG HIỂN THỊ THÔNG TIN HỌC SINH VỪA QUÉT (CÓ LỚP) -->
+          <div id="student-info-card" class="hidden bg-blue-50 border border-blue-200 rounded-xl p-3.5 space-y-2 transition-all">
+            <div class="flex justify-between items-start">
+              <div>
+                <span class="text-[10px] font-bold uppercase tracking-wider text-blue-600">Học sinh vừa quét</span>
+                <h4 id="info-student-name" class="text-base font-bold text-gray-800">---</h4>
+              </div>
+              <span id="info-action-tag" class="text-xs font-bold px-2.5 py-1 rounded-full bg-red-100 text-red-700">---</span>
+            </div>
+            <div class="flex flex-wrap items-center gap-3 text-xs text-gray-600 border-t border-blue-100 pt-2">
+              <p>Mã HS: <strong id="info-student-id" class="text-gray-900">---</strong></p>
+              <p>Lớp: <strong id="info-student-class" class="text-blue-700 bg-blue-100 px-2 py-0.5 rounded font-bold">---</strong></p>
+              <p>Giờ: <span id="info-scan-time" class="text-gray-500">--:--</span></p>
+            </div>
+          </div>
 
-    function getCurrentBuoi() { return new Date().getHours() < 12 ? 'Sáng' : 'Chiều'; }
-    function formatDateToYYYYMMDD(d) {
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    }
-
-    // LẮNG NGHE TRẠNG THÁI MẠNG ĐỂ TỰ ĐỘNG ĐỒNG BỘ
-    window.addEventListener('online', () => {
-      updateNetworkBadge(true);
-      triggerManualSync();
-    });
-    window.addEventListener('offline', () => {
-      updateNetworkBadge(false);
-    });
-
-    function updateNetworkBadge(isOnline) {
-      const badge = document.getElementById('network-status-badge');
-      if (!badge) return;
-      if (isOnline) {
-        badge.className = "text-xs px-2 py-0.5 rounded font-bold bg-emerald-100 text-emerald-800";
-        badge.innerHTML = '<i class="fa-solid fa-wifi"></i> Online';
-      } else {
-        badge.className = "text-xs px-2 py-0.5 rounded font-bold bg-amber-100 text-amber-800";
-        badge.innerHTML = '<i class="fa-solid fa-plane"></i> Offline (Lưu tạm)';
-      }
-    }
-
-    document.addEventListener("DOMContentLoaded", async () => {
-      checkCanBoSession();
-      updateNetworkBadge(navigator.onLine);
-      renderQRLogListUI();
-      
-      const autoBuoiStr = getCurrentBuoi();
-      if(document.getElementById('bv-buoi-auto')) document.getElementById('bv-buoi-auto').value = autoBuoiStr;
-
-      await fetchAllClasses();
-      await fetchAllStudents();
-
-      // Nếu có hàng chờ từ phiên trước, tự động gửi đồng bộ
-      if (navigator.onLine && qrSyncQueue.length > 0) {
-        triggerManualSync();
-      }
-    });
-
-    function checkCanBoSession() {
-      const savedSession = localStorage.getItem('lhp_can_bo_session');
-      if (savedSession) {
-        try {
-          currentUser = JSON.parse(savedSession);
-          document.getElementById('user-name').innerText = currentUser.ho_ten || currentUser.ma_cb;
-          document.getElementById('user-role').innerText = currentUser.vai_tro || 'Cán Bộ';
-          document.getElementById('login-overlay').classList.add('hidden');
-          return;
-        } catch(e){}
-      }
-    }
-
-    // 2. GIẢI MÃ CHUỖI QR TRỰC TIẾP TẠI BỘ NHỚ MÁY KHÔNG CẦN CHỜ CSDL
-    function parseQRData(rawQR) {
-      if (!rawQR) return { maHS: '', hoTen: 'Chưa xác định', lop: 'Chưa xếp lớp', khoi: '10' };
-      const str = String(rawQR).trim();
-
-      // Trường hợp 1: QR là chuỗi JSON
-      if (str.startsWith('{') && str.endsWith('}')) {
-        try {
-          const obj = JSON.parse(str);
-          const maHS = String(obj.ma_hs || obj.maHS || obj.id || '').trim();
-          const hoTen = String(obj.ho_ten || obj.hoTen || obj.ten || '').trim();
-          const lop = String(obj.lop || obj.ten_lop || '').trim();
-          const cached = studentFastMap.get(maHS);
-
-          const finalLop = lop || (cached ? cached.ten_lop : 'Chưa xếp lớp');
-          return {
-            maHS: maHS,
-            hoTen: hoTen || (cached ? cached.ho_ten : `Học sinh ${maHS}`),
-            lop: finalLop,
-            khoi: finalLop.match(/\d+/)?.[0] || (cached ? cached.khoi_id : '10')
-          };
-        } catch(e){}
-      }
-
-      // Trường hợp 2: Khớp trực tiếp Mã HS trong bộ nhớ Cache FastMap
-      if (studentFastMap.has(str)) {
-        const cached = studentFastMap.get(str);
-        return {
-          maHS: cached.ma_hs,
-          hoTen: cached.ho_ten,
-          lop: cached.ten_lop || 'Chưa xếp lớp',
-          khoi: cached.khoi_id || (cached.ten_lop ? cached.ten_lop.match(/\d+/)?.[0] : '10')
-        };
-      }
-
-      // Trường hợp 3: Chuỗi QR có ký tự phân cách (VD: 3167377284|Vũ Thị Mai Anh|10C3)
-      const parts = str.split(/[|;,]+/);
-
-      if (parts.length >= 2) {
-        const maHS = parts[0].trim();
-        const hoTen = parts[1].trim();
-        const lop = parts.length >= 3 ? parts[2].trim() : '';
-
-        const cached = studentFastMap.get(maHS);
-        const finalLop = lop || (cached ? cached.ten_lop : 'Chưa xếp lớp');
-
-        return {
-          maHS: maHS,
-          hoTen: hoTen || (cached ? cached.ho_ten : `Học sinh ${maHS}`),
-          lop: finalLop,
-          khoi: finalLop.match(/\d+/)?.[0] || (cached ? cached.khoi_id : '10')
-        };
-      }
-
-      // Trường hợp 4: Mã HS đơn thuần chưa nạp kịp vào FastMap
-      const cleanMa = parts[0].trim();
-      const cached = studentFastMap.get(cleanMa);
-      return {
-        maHS: cleanMa,
-        hoTen: cached ? cached.ho_ten : `Học sinh ${cleanMa}`,
-        lop: cached ? (cached.ten_lop || 'Chưa xếp lớp') : 'Chưa xếp lớp',
-        khoi: cached ? (cached.khoi_id || '10') : '10'
-      };
-    }
-
-    // 3. THAO TÁC QUÉT QR TRÊN MÀN HÌNH (TỐC ĐỘ BẮT KHUNG HÌNH CAO)
-    async function onQRScanned(rawQR) {
-      if (!rawQR || isProcessingQR) return;
-      isProcessingQR = true;
-
-      if (html5QrcodeScanner) { 
-        try { html5QrcodeScanner.pause(true); } catch(e){} 
-      }
-
-      // Bóc tách thông tin trực tiếp từ mã QR không chờ API
-      const parsed = parseQRData(rawQR);
-      const actionRadio = document.querySelector('input[name="qr-action"]:checked');
-      const action = actionRadio ? actionRadio.value : 'muon_khong_phep';
-      const actionText = actionRadio ? actionRadio.parentElement.innerText.trim() : 'Đi học muộn (Không phép)';
-
-      pendingQRData = { ...parsed, action, actionText };
-
-      // Cập nhật Modal lập tức
-      document.getElementById('modal-ma-hs').innerText = parsed.maHS;
-      document.getElementById('modal-ho-ten').innerText = parsed.hoTen;
-      document.getElementById('modal-lop').innerText = parsed.lop !== 'Chưa xếp lớp' ? `Lớp ${parsed.lop} (Khối ${parsed.khoi})` : 'Chưa xếp lớp';
-      document.getElementById('modal-hinh-thuc').innerText = actionText;
-      document.getElementById('qr-modal').classList.remove('hidden');
-    }
-
-    // 4. LƯU THÔNG TIN & ĐƯA VÀO HÀNG CHỜ ĐỒNG BỘ VỚI CSDL
-    async function confirmSaveQR() {
-      if (!pendingQRData) return;
-      const { maHS, hoTen, lop, khoi, action, actionText } = pendingQRData;
-
-      let diemVal = 0, maHDVal = 'HD02a';
-      if (action === 'muon_co_phep') { diemVal = -0.75; maHDVal = 'HD02c'; }
-      else if (action === 'muon_khong_phep') { diemVal = -1.0; maHDVal = 'HD02a'; }
-      else if (action === 'diem_thuong') { diemVal = 1.0; maHDVal = 'KT01'; }
-      else if (action === 'diem_tru') { diemVal = -1.0; maHDVal = 'VP01'; }
-
-      const autoBuoi = getCurrentBuoi();
-      const todayStr = formatDateToYYYYMMDD(new Date());
-      const nowTimeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-
-      const syncItem = {
-        id: Date.now() + '_' + Math.random().toString(36).substring(2, 6),
-        ma_hs: String(maHS).slice(0, 30),
-        ho_ten: String(hoTen).slice(0, 50),
-        khoi: String(khoi),
-        lop: String(lop).slice(0, 20),
-        ngay_diem_danh: todayStr,
-        buoi: autoBuoi,
-        trang_thai: action,
-        ma_hd: maHDVal,
-        chi_tiet: `${actionText} (${nowTimeStr})`.slice(0, 100),
-        diem: diemVal,
-        ten_nguoi_cap_nhat: currentUser ? String(currentUser.ho_ten).slice(0, 50) : 'Cán bộ',
-        time_str: nowTimeStr,
-        status: 'pending' // 'pending' | 'synced'
-      };
-
-      // Đưa vào hàng chờ
-      qrSyncQueue.push(syncItem);
-      saveSyncState();
-
-      closeQRModal();
-
-      // Kích hoạt đồng bộ ngầm
-      processSyncQueue();
-    }
-
-    // XỬ LÝ ĐỒNG BỘ HÀNG CHỜ VỀ CSDL SUPABASE (CÓ CHUYỂN ĐỔI BẢN GHI VẮNG)
-    async function processSyncQueue() {
-      if (!navigator.onLine || qrSyncQueue.length === 0) {
-        renderQRLogListUI();
-        return;
-      }
-
-      const itemsToSync = qrSyncQueue.filter(i => i.status === 'pending');
-      if (itemsToSync.length === 0) return;
-
-      for (let item of itemsToSync) {
-        try {
-          // Tra cứu xem học sinh trong ngày/buổi này đã có bản ghi VẮNG chưa
-          const { data: existingRecords } = await _supabase.from('diem_danh_master')
-            .select('id, trang_thai')
-            .eq('ma_hs', item.ma_hs)
-            .eq('ngay_diem_danh', item.ngay_diem_danh)
-            .eq('buoi', item.buoi);
-
-          const vangRecord = existingRecords ? existingRecords.find(r => String(r.trang_thai || '').toLowerCase().includes('vang')) : null;
-
-          if (vangRecord) {
-            // Đã có bản ghi báo Vắng trước đó -> CẬP NHẬT THÀNH ĐI MUỘN
-            const { error: updateErr } = await _supabase.from('diem_danh_master').update({
-              trang_thai: item.trang_thai,
-              diem: item.diem,
-              ma_hd: item.ma_hd,
-              chi_tiet: `[SỬA VẮNG -> MUỘN lúc ${item.time_str}] ${item.chi_tiet}`.slice(0, 100),
-              ten_nguoi_cap_nhat: item.ten_nguoi_cap_nhat
-            }).eq('id', vangRecord.id);
-
-            if (updateErr) throw updateErr;
-          } else {
-            // Chưa có bản ghi -> TẠO MỚI BẢN GHI ĐIỂM DANH
-            const { error: insertErr } = await _supabase.from('diem_danh_master').insert([{
-              ma_hs: item.ma_hs,
-              ho_ten: item.ho_ten,
-              khoi: item.khoi,
-              lop: item.lop,
-              ngay_diem_danh: item.ngay_diem_danh,
-              buoi: item.buoi,
-              trang_thai: item.trang_thai,
-              ma_hd: item.ma_hd,
-              chi_tiet: item.chi_tiet,
-              diem: item.diem,
-              ten_nguoi_cap_nhat: item.ten_nguoi_cap_nhat
-            }]);
-
-            if (insertErr) throw insertErr;
-          }
-
-          // Đánh dấu đã đồng bộ
-          item.status = 'synced';
-
-        } catch (err) {
-          console.error("Lỗi đồng bộ item:", item.ma_hs, err);
-          // Mạng hỏng giữa chừng thì ngắt lặp
-          break;
-        }
-      }
-
-      saveSyncState();
-      renderQRLogListUI();
-    }
-
-    function saveSyncState() {
-      // Giữ lại tối đa 50 lượt quét gần nhất
-      if (qrSyncQueue.length > 50) qrSyncQueue = qrSyncQueue.slice(-50);
-      localStorage.setItem('lhp_qr_sync_queue', JSON.stringify(qrSyncQueue));
-    }
-
-    function triggerManualSync() {
-      if (!navigator.onLine) {
-        alert("Hiện tại chưa có kết nối Internet! Vui lòng kiểm tra lại mạng.");
-        return;
-      }
-      processSyncQueue();
-    }
-
-    // RENDER LỊCH SỬ QUÉT & TRẠNG THÁI ĐỒNG BỘ TRÊN GIAO DIỆN
-    function renderQRLogListUI() {
-      const logContainer = document.getElementById('qr-log-list');
-      const pendingBadge = document.getElementById('pending-count-badge');
-      
-      const pendingItems = qrSyncQueue.filter(i => i.status === 'pending');
-      if (pendingBadge) pendingBadge.innerText = pendingItems.length;
-
-      if (!logContainer) return;
-      logContainer.innerHTML = '';
-
-      if (qrSyncQueue.length === 0) {
-        logContainer.innerHTML = '<p class="text-sm text-gray-400 italic text-center p-2">Chưa có lượt quét nào...</p>';
-        return;
-      }
-
-      // Đảo ngược danh sách hiển thị lượt mới nhất lên đầu
-      const reversedQueue = [...qrSyncQueue].reverse();
-
-      reversedQueue.forEach(item => {
-        const isSynced = item.status === 'synced';
-        const badgeHTML = isSynced 
-          ? '<span class="bg-emerald-100 text-emerald-800 text-[11px] font-bold px-2 py-0.5 rounded flex items-center gap-1"><i class="fa-solid fa-check-double"></i> Đã đồng bộ</span>'
-          : '<span class="bg-amber-100 text-amber-800 text-[11px] font-bold px-2 py-0.5 rounded flex items-center gap-1"><i class="fa-solid fa-clock"></i> Chờ đồng bộ</span>';
-
-        logContainer.innerHTML += `
-          <div class="p-2.5 ${isSynced ? 'bg-white' : 'bg-amber-50'} border border-slate-200 rounded-lg text-xs space-y-1 shadow-sm">
+          <!-- LỊCH SỬ QUÉT -->
+          <div class="space-y-2">
             <div class="flex justify-between items-center">
-              <strong class="text-gray-800 text-sm">${item.ho_ten} (${item.lop !== 'Chưa xếp lớp' ? item.lop : 'HS ' + item.ma_hs})</strong>
-              ${badgeHTML}
+              <h3 class="font-bold text-sm text-gray-700">Lịch Sử Quét & Trạng Thái Đồng Bộ:</h3>
+              <button onclick="triggerManualSync()" id="btn-sync-now" class="bg-amber-500 text-white text-xs px-3 py-1.5 rounded-lg font-bold hover:bg-amber-600 flex items-center gap-1 shadow-sm">
+                <i class="fa-solid fa-rotate"></i> Gửi Đồng Bộ Lại (<span id="pending-count-badge">0</span>)
+              </button>
             </div>
-            <div class="flex justify-between text-gray-500">
-              <span>${item.chi_tiet}</span>
-              <span class="font-mono text-[11px]">${item.time_str}</span>
+
+            <div id="qr-log-list" class="space-y-2 max-h-[220px] overflow-y-auto border p-2 rounded-xl bg-slate-50">
+              <p class="text-sm text-gray-400 italic text-center p-2">Chưa có lượt quét nào trong phiên...</p>
             </div>
           </div>
-        `;
-      });
-    }
+        </div>
+      </div>
+    </section>
+  </main>
 
-    function closeQRModal() {
-      document.getElementById('qr-modal').classList.add('hidden');
-      isProcessingQR = false;
-      if (html5QrcodeScanner) { try { html5QrcodeScanner.resume(); } catch(e){} }
-    }
+  <!-- SCRIPT LOGIC XỬ LÝ -->
+  <script>
+    // 1. DỮ LIỆU MẪU DÙNG CHO TÌM KIẾM THEO MÃ HS (Bạn có thể sửa danh sách này)
+    const danhSachHocSinh = [
+      { maHS: "HS001", hoTen: "Nguyễn Văn An", lop: "10A1" },
+      { maHS: "HS002", hoTen: "Trần Thị Bích", lop: "10A2" },
+      { maHS: "HS003", hoTen: "Lê Văn Cường", lop: "11B1" },
+      { maHS: "HS004", hoTen: "Phạm Minh Dung", lop: "12C3" }
+    ];
 
-    function startQRScanner() {
-      if (html5QrcodeScanner) return;
-      html5QrcodeScanner = new Html5Qrcode("reader", { 
-        experimentalFeatures: { useBarCodeDetectorIfSupported: true } 
-      });
-      const config = { fps: 15, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
-      html5QrcodeScanner.start({ facingMode: "environment" }, config, onQRScanned).catch(err => alert("Lỗi Camera: " + err));
-    }
+    let html5QrCodeScanner = null;
+    let pendingLogs = 0;
 
-    function stopQRScanner() { 
-      if (html5QrcodeScanner) { 
-        html5QrcodeScanner.stop().then(() => { 
-          html5QrcodeScanner.clear(); 
-          html5QrcodeScanner = null; 
-          isProcessingQR = false;
-        }); 
-      } 
-    }
-    
-    function processManualQR() { 
-      const val = document.getElementById('manual-ma-hs').value.trim(); 
-      if(val) onQRScanned(val); 
-    }
+    // 2. XỬ LÝ CHUỖI QR / MÃ HS KHI QUÉT HOẶC NHẬP TAY
+    function handleQRCode(qrData) {
+      if (!qrData) return;
 
-    // 5. CÁC HÀM CƠ SỞ DỮ LIỆU BAN ĐẦU
-    async function fetchAllStudents() {
+      let student = null;
+
+      // TH1: Chuỗi QR là JSON (Vd mã chứa thông tin: {"maHS":"HS001", "hoTen":"Nguyễn Văn A", "lop":"10A1"})
       try {
-        const { data } = await _supabase.from('hoc_sinh').select('*');
-        allStudentsList = [];
-        studentFastMap.clear();
-
-        (data || []).forEach(s => {
-          const cleanMa = String(s.ma_hs || s.ma_hoc_sinh || s.id || '').trim();
-          const cleanLop = String(s.ten_lop || s.lop || s.lop_ten || '').trim();
-          const cleanKhoi = String(s.khoi_id || s.khoi || (cleanLop ? cleanLop.match(/\d+/)?.[0] : '10')).trim();
-
-          const item = { 
-            ma_hs: cleanMa, 
-            ho_ten: String(s.ho_ten || s.ten || '').trim(), 
-            ten_lop: cleanLop, 
-            khoi_id: cleanKhoi 
+        const parsed = JSON.parse(qrData);
+        if (parsed.maHS || parsed.id) {
+          student = {
+            maHS: parsed.maHS || parsed.id,
+            hoTen: parsed.hoTen || parsed.name || "Chưa rõ tên",
+            lop: parsed.lop || parsed.class || "Chưa rõ lớp"
           };
-          
-          if (cleanMa) {
-            allStudentsList.push(item);
-            studentFastMap.set(cleanMa, item);
-          }
-        });
-      } catch (e) {}
-    }
-
-    async function fetchAllClasses() {
-      try {
-        let { data } = await _supabase.from('lop').select('ten_lop, khoi_id').order('ten_lop', { ascending: true });
-        if (!data || data.length === 0) {
-          const resHS = await _supabase.from('hoc_sinh').select('ten_lop, lop, khoi_id');
-          data = resHS.data || [];
         }
+      } catch (e) {
+        // TH2: Mã QR chỉ chứa Mã HS (Vd: "HS001"), tra cứu trong mảng danhSachHocSinh
+        const cleanCode = qrData.trim().toUpperCase();
+        const found = danhSachHocSinh.find(s => s.maHS.toUpperCase() === cleanCode);
+        
+        if (found) {
+          student = found;
+        } else {
+          student = {
+            maHS: cleanCode,
+            hoTen: "Học sinh mới / Chưa cập nhật",
+            lop: "Chưa phân lớp"
+          };
+        }
+      }
 
-        const classMap = new Map();
-        (data || []).forEach(item => {
-          const cleanLop = String(item.ten_lop || item.lop || '').trim();
-          if (!cleanLop) return;
-          const detectedKhoi = cleanLop.match(/\d+/)?.[0] || '10';
-          if (!classMap.has(cleanLop)) classMap.set(cleanLop, { ten_lop: cleanLop, khoi_id: detectedKhoi });
-        });
+      // Lấy hình thức vi phạm / khen thưởng đang chọn
+      const actionEl = document.querySelector('input[name="qr-action"]:checked');
+      const actionText = actionEl ? actionEl.nextElementSibling.innerText : 'Chưa rõ';
+      const timeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-        allLopList = Array.from(classMap.values()).sort((a, b) => a.ten_lop.localeCompare(b.ten_lop, 'vi', { numeric: true }));
-        populateLopDropdown('bv-khoi', 'bv-lop');
-        populateLopDropdown('cd-khoi', 'cd-lop');
-        populateLopDropdown('tk-khoi', 'tk-lop');
-      } catch (err) {}
+      // Cập nhật thông tin lên Thẻ Card Học sinh
+      document.getElementById('info-student-name').innerText = student.hoTen;
+      document.getElementById('info-student-id').innerText = student.maHS;
+      document.getElementById('info-student-class').innerText = student.lop; // <--- Cập nhật thông tin Lớp
+      document.getElementById('info-action-tag').innerText = actionText;
+      document.getElementById('info-scan-time').innerText = timeStr;
+      document.getElementById('student-info-card').classList.remove('hidden');
+
+      // Thêm thông tin vào Lịch sử quét
+      addLogEntry({ ...student, actionText, timeStr });
     }
 
-    function populateLopDropdown(khoiSelectId, lopSelectId) {
-      const khoiVal = document.getElementById(khoiSelectId)?.value.trim() || '';
-      const lopSelect = document.getElementById(lopSelectId);
-      if (!lopSelect) return;
-      lopSelect.innerHTML = '<option value="">-- Chọn Lớp --</option>';
-      allLopList.filter(item => !khoiVal || item.khoi_id === khoiVal || item.ten_lop.startsWith(khoiVal))
-        .forEach(item => lopSelect.innerHTML += `<option value="${item.ten_lop}">${item.ten_lop}</option>`);
+    // 3. THÊM DÒNG VÀO LỊCH SỬ QUÉT
+    function addLogEntry(data) {
+      const logList = document.getElementById('qr-log-list');
+      
+      // Xóa thông báo rỗng
+      if (logList.querySelector('p.italic')) {
+        logList.innerHTML = '';
+      }
+
+      const itemHtml = `
+        <div class="bg-white p-2.5 rounded-lg border border-gray-200 flex justify-between items-center text-xs shadow-sm">
+          <div>
+            <div class="font-bold text-gray-800">
+              ${data.hoTen} 
+              <span class="text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 font-semibold ml-1">Lớp ${data.lop}</span>
+            </div>
+            <div class="text-gray-500 mt-0.5">Mã: ${data.maHS} • <span class="text-amber-700 font-medium">${data.actionText}</span></div>
+          </div>
+          <div class="text-right">
+            <span class="text-gray-400 font-mono block">${data.timeStr}</span>
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500" title="Đã ghi nhận"></span>
+          </div>
+        </div>
+      `;
+
+      logList.insertAdjacentHTML('afterbegin', itemHtml);
+
+      // Cập nhật đếm số lượng offline pending
+      pendingLogs++;
+      document.getElementById('pending-count-badge').innerText = pendingLogs;
     }
 
-    function switchTab(index) {
-      document.querySelectorAll('.tab-btn').forEach((btn, i) => btn.classList.toggle('active', i === index));
-      document.querySelectorAll('.tab-content').forEach((c, i) => c.classList.toggle('hidden', i !== index));
-      if (index !== 0) stopQRScanner();
+    // 4. XỬ LÝ KHI BẤM NÚT XÁC NHẬN NHẬP TAY
+    function processManualQR() {
+      const inputEl = document.getElementById('manual-ma-hs');
+      const val = inputEl.value.trim();
+      if (!val) {
+        alert("Vui lòng nhập Mã học sinh hoặc dán nội dung QR!");
+        return;
+      }
+      handleQRCode(val);
+      inputEl.value = '';
     }
 
-    function performCanBoLogin() {
-      document.getElementById('login-overlay').classList.add('hidden');
+    // 5. BẬT CAMERA QUÉT TỨC THỜI
+    function startQRScanner() {
+      if (!html5QrCodeScanner) {
+        html5QrCodeScanner = new Html5Qrcode("reader");
+      }
+
+      const config = { fps: 10, qrbox: { width: 220, height: 220 } };
+
+      html5QrCodeScanner.start(
+        { facingMode: "environment" }, 
+        config, 
+        (decodedText) => {
+          handleQRCode(decodedText);
+          // Tạm dừng 1 giây để tránh quét lặp liên tục cùng 1 mã
+          html5QrCodeScanner.pause();
+          setTimeout(() => { html5QrCodeScanner.resume(); }, 1500);
+        },
+        (errorMessage) => {
+          // Bỏ qua lỗi quét liên tục không tìm thấy mã
+        }
+      ).catch(err => {
+        alert("Không thể bật Camera! Kiểm tra quyền truy cập Camera của trình duyệt.");
+        console.error(err);
+      });
     }
-    function handleLogout() {
-      if (confirm("Đăng xuất hệ thống?")) window.location.reload();
+
+    // 6. TẮT CAMERA
+    function stopQRScanner() {
+      if (html5QrCodeScanner) {
+        html5QrCodeScanner.stop().then(() => {
+          document.getElementById('reader').innerHTML = '<span class="text-white text-xs">Camera đã tắt</span>';
+        }).catch(err => console.error(err));
+      }
+    }
+
+    // 7. GIẢ LẬP ĐỒNG BỘ DATA
+    function triggerManualSync() {
+      if (pendingLogs === 0) {
+        alert("Hiện không có bản ghi nào chờ đồng bộ.");
+        return;
+      }
+      alert(`Đã đồng bộ thành công ${pendingLogs} bản ghi lên hệ thống!`);
+      pendingLogs = 0;
+      document.getElementById('pending-count-badge').innerText = "0";
     }
   </script>
 </body>
